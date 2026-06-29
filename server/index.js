@@ -19,7 +19,7 @@ app.use(cors({
 
 app.use(express.json());
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -40,7 +40,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-app.post("/api/auth/mfa", async (req, res) => {
+app.post("/api/login/mfa", async (req, res) => {
   try {
     const { email, password, mfaCode } = req.body;
 
@@ -135,14 +135,4 @@ const PORT = 4000;
 
 app.listen(PORT, () => {
   console.log(`Garmin API running on http://localhost:${PORT}`);
-  console.log(`Endpoints:`);
-  console.log(`POST /api/auth/login - Login with email and password`);
-  console.log(`POST /api/auth/mfa - Login with MFA code`);
-  console.log(`GET /api/session - Check session status`);
-  console.log(`GET /api/daily?date=YYYY-MM-DD - Get daily summary`);
-  console.log(`GET /api/sleep?date=YYYY-MM-DD - Get sleep summary`);
-  console.log(`GET /api/weekly?date=YYYY-MM-DD - Get weekly summary`);
-  console.log(
-    `GET /api/activities?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=N - Get activities`
-  );
 });

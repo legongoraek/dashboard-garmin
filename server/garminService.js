@@ -5,10 +5,12 @@ const GARMIN_SCRIPT_PATH = path.resolve(
   "../ai-skill-garmin/skills/garmin-connect/scripts/garmin.ts"
 );
 
+const BUN_PATH = process.env.BUN_PATH || "bun";
+
 function runGarminCommand(args = [], env = {}) {
   return new Promise((resolve, reject) => {
     execFile(
-      "bun",
+      BUN_PATH,
       ["run", GARMIN_SCRIPT_PATH, ...args],
       {
         env: {
