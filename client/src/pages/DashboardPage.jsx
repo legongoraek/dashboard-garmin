@@ -15,6 +15,7 @@ import {
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import MetricSlider from "../components/MetricSlider";
 
 import {
   getActivities,
@@ -163,7 +164,7 @@ export default function DashboardPage({ onLogout }) {
 
       const response = await getDaily(today);
 
-      console.log("Daily response:", response);
+      // console.log("Daily response:", response);
 
       setDaily(response.data);
     } catch (error) {
@@ -185,7 +186,7 @@ export default function DashboardPage({ onLogout }) {
 
       const response = await getSleep(sleepDate);
 
-      console.log("Sleep response:", response);
+      // console.log("Sleep response:", response);
 
       const sleepData = response?.data ?? null;
 
@@ -208,7 +209,7 @@ export default function DashboardPage({ onLogout }) {
 
       const response = await getHrv(today);
 
-      console.log("HRV response:", response);
+      // console.log("HRV response:", response);
 
       setHrv(response.data);
     } catch (error) {
@@ -227,7 +228,7 @@ export default function DashboardPage({ onLogout }) {
 
       const response = await getReadiness(today);
 
-      console.log("Readiness response:", response);
+      // console.log("Readiness response:", response);
 
       setReadiness(response.data);
     } catch (error) {
@@ -254,7 +255,7 @@ export default function DashboardPage({ onLogout }) {
         limit: 5,
       });
 
-      console.log("Activities response:", response);
+      // console.log("Activities response:", response);
 
       const data = response.data;
 
@@ -277,7 +278,7 @@ export default function DashboardPage({ onLogout }) {
 
       const response = await getWeekly(today);
 
-      console.log("Weekly response:", response);
+      // console.log("Weekly response:", response);
 
       setWeekly(response.data);
     } catch (error) {
@@ -429,233 +430,131 @@ export default function DashboardPage({ onLogout }) {
               </Alert>
             )}
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Pasos</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : formatNumber(totalSteps)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Meta: {formatNumber(daily?.dailyStepGoal)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 2, mb: 1 }}>
+              Resumen diario
+            </Typography>
 
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Calorías</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : formatNumber(totalCalories)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Activas: {formatNumber(activeCalories)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Distancia</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : formatDistanceMeters(totalDistance)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Wellness: {formatDistanceMeters(daily?.wellnessDistanceMeters)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Ritmo en reposo</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : restingHeartRate ? `${restingHeartRate} bpm` : "N/A"}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Máximo: {maxHeartRate ? `${maxHeartRate} bpm` : "N/A"}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Estrés promedio</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : averageStress ?? "N/A"}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Nivel: {daily?.stressQualifier ?? "N/A"}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Body Battery</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : bodyBattery ?? "N/A"}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Alto: {bodyBatteryHigh ?? "N/A"} · Bajo: {bodyBatteryLow ?? "N/A"}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Minutos moderados</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : formatMinutes(moderateMinutes)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Meta semanal: {formatMinutes(intensityGoal)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Minutos intensos</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {dailyLoading ? "..." : formatMinutes(vigorousMinutes)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Actividad registrada
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {sleepError && (
-              <Alert severity="error">
-                {sleepError}
-              </Alert>
-            )}
-
+            <MetricSlider
+              items={[
+                {
+                  label: "Pasos",
+                  value: formatNumber(totalSteps),
+                  sublabel: `Meta: ${formatNumber(daily?.dailyStepGoal)}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Calorías",
+                  value: formatNumber(totalCalories),
+                  sublabel: `Activas: ${formatNumber(activeCalories)}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Distancia",
+                  value: formatDistanceMeters(totalDistance),
+                  sublabel: `Wellness: ${formatDistanceMeters(daily?.wellnessDistanceMeters)}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Ritmo en reposo",
+                  value: restingHeartRate ? `${restingHeartRate} bpm` : "N/A",
+                  sublabel: `Máximo: ${maxHeartRate ? `${maxHeartRate} bpm` : "N/A"}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Estrés promedio",
+                  value: averageStress ?? "N/A",
+                  sublabel: `Nivel: ${daily?.stressQualifier ?? "N/A"}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Body Battery",
+                  value: bodyBattery ?? "N/A",
+                  sublabel: `Alto: ${bodyBatteryHigh ?? "N/A"} · Bajo: ${bodyBatteryLow ?? "N/A"}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Minutos moderados",
+                  value: formatMinutes(moderateMinutes),
+                  sublabel: `Meta semanal: ${formatMinutes(intensityGoal)}`,
+                  loading: dailyLoading,
+                },
+                {
+                  label: "Minutos intensos",
+                  value: formatMinutes(vigorousMinutes),
+                  sublabel: "Actividad registrada",
+                  loading: dailyLoading,
+                },
+              ]}
+              type="daily"
+            />
+          
+            {sleepError && <Alert severity="error">{sleepError}</Alert>}
             {!sleepLoading && sleepDTO && sleepDTO.sleepTimeSeconds === null && (
               <Alert severity="info">
-                Garmin no tiene datos de sueño registrados para esta fecha. Intenta consultar el día anterior o revisa si el dispositivo registró sueño.
+                Garmin no tiene datos de sueño registrados para esta fecha. Intenta
+                consultar el día anterior o revisa si el dispositivo registró sueño.
               </Alert>
             )}
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Sueño total</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {sleepLoading ? "..." : formatSecondsToHoursMinutes(sleepTotalSeconds)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Fecha: {sleepDTO?.calendarDate ?? sleepDate}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Sueño profundo</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {sleepLoading ? "..." : formatSecondsToHoursMinutes(deepSleepSeconds)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Ligero: {formatSecondsToHoursMinutes(lightSleepSeconds)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">REM</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {sleepLoading ? "..." : formatSecondsToHoursMinutes(remSleepSeconds)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Despierto: {formatSecondsToHoursMinutes(awakeSeconds)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Siesta</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {sleepLoading ? "..." : formatSecondsToHoursMinutes(napTimeSeconds)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {sleepStartLocal && sleepEndLocal
-                        ? `${sleepStartLocal} - ${sleepEndLocal}`
-                        : "Sin ventana de sueño"}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {hrvError && (
-              <Alert severity="error">
-                {hrvError}
-              </Alert>
-            )}
-
-            {readinessError && (
-              <Alert severity="error">
-                {readinessError}
-              </Alert>
-            )}
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">HRV</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {hrvLoading ? "..." : hrvValue ? `${hrvValue} ms` : "N/A"}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Estado: {hrvStatus}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography color="text.secondary">Readiness</Typography>
-                    <Typography variant="h4" fontWeight={800}>
-                      {readinessLoading ? "..." : readinessValue ?? "N/A"}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {readinessLevel}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+          
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+              Sueño
+            </Typography>
+            <MetricSlider
+              items={[
+                {
+                  label: "Sueño total",
+                  value: formatSecondsToHoursMinutes(sleepTotalSeconds),
+                  sublabel: `Fecha: ${sleepDTO?.calendarDate ?? sleepDate}`,
+                  loading: sleepLoading,
+                },
+                {
+                  label: "Sueño profundo",
+                  value: formatSecondsToHoursMinutes(deepSleepSeconds),
+                  sublabel: `Ligero: ${formatSecondsToHoursMinutes(lightSleepSeconds)}`,
+                  loading: sleepLoading,
+                },
+                {
+                  label: "REM",
+                  value: formatSecondsToHoursMinutes(remSleepSeconds),
+                  sublabel: `Despierto: ${formatSecondsToHoursMinutes(awakeSeconds)}`,
+                  loading: sleepLoading,
+                },
+                {
+                  label: "Siesta",
+                  value: formatSecondsToHoursMinutes(napTimeSeconds),
+                  sublabel:
+                    sleepStartLocal && sleepEndLocal
+                      ? `${sleepStartLocal} - ${sleepEndLocal}`
+                      : "Sin ventana de sueño",
+                  loading: sleepLoading,
+                },
+              ]}
+              type="sleep"
+            />
+          
+            {hrvError && <Alert severity="error">{hrvError}</Alert>}
+            {readinessError && <Alert severity="error">{readinessError}</Alert>}
+          
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
+              HRV y Readiness
+            </Typography>
+            <MetricSlider
+              items={[
+                {
+                  label: "HRV",
+                  value: hrvValue ? `${hrvValue} ms` : "N/A",
+                  sublabel: `Estado: ${hrvStatus}`,
+                  loading: hrvLoading,
+                },
+                {
+                  label: "Readiness",
+                  value: readinessValue ?? "N/A",
+                  sublabel: readinessLevel,
+                  loading: readinessLoading,
+                },
+              ]}
+              type="hrv-readiness"
+            />
           </Card>
 
           <Card>
@@ -748,7 +647,7 @@ export default function DashboardPage({ onLogout }) {
 
               {weeklyDays?.length > 0 && (
                 <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Pasos semanales</Typography>
@@ -762,7 +661,7 @@ export default function DashboardPage({ onLogout }) {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Calorías semanales</Typography>
@@ -776,7 +675,7 @@ export default function DashboardPage({ onLogout }) {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Distancia semanal</Typography>
@@ -790,7 +689,7 @@ export default function DashboardPage({ onLogout }) {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Sueño semanal</Typography>
@@ -804,7 +703,7 @@ export default function DashboardPage({ onLogout }) {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Estrés promedio</Typography>
@@ -818,7 +717,7 @@ export default function DashboardPage({ onLogout }) {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Ritmo reposo prom.</Typography>
@@ -832,7 +731,7 @@ export default function DashboardPage({ onLogout }) {
                     </Card>
                   </Grid>
 
-                  <Grid item xs={12} sm={6} md={3}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography color="text.secondary">Body Battery prom.</Typography>
