@@ -16,6 +16,7 @@ import FavoriteIcon from "@mui/icons-material/Favorite";
 import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import MetricSlider from "../components/MetricSlider";
+import RecentActivities from "../components/RecentActivities";
 
 import {
   getActivities,
@@ -557,69 +558,13 @@ export default function DashboardPage({ onLogout }) {
             />
           </Card>
 
-          <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight={800} gutterBottom>
-                Actividades recientes
-              </Typography>
-
-              {activitiesLoading && (
-                <Typography color="text.secondary">Cargando actividades...</Typography>
-              )}
-
-              {activitiesError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {activitiesError}
-                </Alert>
-              )}
-
-              {!activitiesLoading && activities?.length === 0 && (
-                <Typography color="text.secondary">
-                  No hay actividades recientes.
-                </Typography>
-              )}
-
-              <Stack spacing={2}>
-                {activities?.map((activity, index) => (
-                  <Box
-                    key={activity.activityId || index}
-                    sx={{
-                      p: 2,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Typography fontWeight={800}>
-                      {activity.activityName ||
-                        activity.activityType?.typeKey ||
-                        "Actividad"}
-                    </Typography>
-
-                    <Typography color="text.secondary" fontSize={14}>
-                      {activity.startTimeLocal ||
-                        activity.startTimeGMT ||
-                        "Sin fecha"}
-                    </Typography>
-
-                    <Typography sx={{ mt: 1 }}>
-                      Distancia:{" "}
-                      {activity.distance
-                        ? formatDistanceMeters(activity.distance)
-                        : "N/A"}
-                    </Typography>
-
-                    <Typography>
-                      Duración:{" "}
-                      {activity.duration
-                        ? formatSecondsToHoursMinutes(activity.duration)
-                        : "N/A"}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
+          <RecentActivities
+            activities={activities}
+            activitiesLoading={activitiesLoading}
+            activitiesError={activitiesError}
+            formatDistanceMeters={formatDistanceMeters}
+            formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
+          />
 
           <Card>
             <CardContent>
