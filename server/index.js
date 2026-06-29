@@ -8,6 +8,9 @@ import {
   getSleepSummary,
   getWeeklySummary,
   getActivities,
+  getHrvSummary,
+  getTrainingReadiness,
+  getTrainingStatus,
   checkSession,
 } from "./garminService.js";
 
@@ -121,6 +124,48 @@ app.get("/api/activities", async (req, res) => {
       to,
       limit,
     });
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/hrv", async (req, res) => {
+  try {
+    const { date } = req.query;
+    const result = await getHrvSummary(date);
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/readiness", async (req, res) => {
+  try {
+    const { date } = req.query;
+    const result = await getTrainingReadiness(date);
+
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
+app.get("/api/training-status", async (req, res) => {
+  try {
+    const { date } = req.query;
+    const result = await getTrainingStatus(date);
 
     return res.json(result);
   } catch (error) {

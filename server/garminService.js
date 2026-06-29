@@ -130,3 +130,15 @@ export async function getActivities({ from, to, limit = 10 }) {
 
   return runGarminCommand(args);
 }
+
+export async function getHrvSummary(date) {
+  return runGarminCommand(["hrv", date, "--pretty"]);
+}
+
+export async function getTrainingReadiness(date) {
+  return runGarminCommand(["readiness", date, "--pretty"]);
+}
+
+export async function getTrainingStatus(date) {
+  return runGarminCommand(["training-status", date, "--pretty"]);
+}

@@ -63,3 +63,33 @@ export async function getActivities({ from, to, limit = 10 }) {
 
   return response.data;
 }
+
+export async function getHrv(date) {
+  const response = await api.get("/hrv", {
+    params: { date },
+  });
+
+  return response.data;
+}
+
+export async function getReadiness(date) {
+  const response = await api.get("/readiness", {
+    params: { date },
+  });
+
+  return response.data;
+}
+
+export async function getTrainingStatus(date) {
+  console.log("Fetching training status for date:", date);
+  // const response = await api.get("/training-status", {
+  //   params: { date },
+  // });
+
+  // return response.data;
+  return {
+    trainingStatus: "Productive",
+    status: "Productive",
+    trainingStatusFeedbackPhrase: "You are in a productive state for training.",
+  };
+}
