@@ -16,9 +16,22 @@ import {
 
 const app = express();
 
-app.use(cors({
-  origin: "http://localhost:5173",
-}));
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origen no permitido por CORS"));
+    },
+  })
+);
 
 app.use(express.json());
 
@@ -176,7 +189,7 @@ app.get("/api/training-status", async (req, res) => {
   }
 });
 
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
   console.log(`Garmin API running on http://localhost:${PORT}`);

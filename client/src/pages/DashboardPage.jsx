@@ -17,6 +17,7 @@ import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import MetricSlider from "../components/MetricSlider";
 import RecentActivities from "../components/RecentActivities";
+import WeeklySummary from "../components/WeeklySummary";
 
 import {
   getActivities,
@@ -487,10 +488,12 @@ export default function DashboardPage({ onLogout }) {
                 },
               ]}
               type="daily"
+              storageKey="garmin_daily_metrics"
+              filterable
             />
           
             {sleepError && <Alert severity="error">{sleepError}</Alert>}
-            {!sleepLoading && sleepDTO && sleepDTO.sleepTimeSeconds === null && (
+            {!sleepLoading && sleepDTO && sleepDTO?.sleepTimeSeconds === null && (
               <Alert severity="info">
                 Garmin no tiene datos de sueño registrados para esta fecha. Intenta
                 consultar el día anterior o revisa si el dispositivo registró sueño.
@@ -531,6 +534,8 @@ export default function DashboardPage({ onLogout }) {
                 },
               ]}
               type="sleep"
+              storageKey="garmin_sleep_metrics"
+              filterable
             />
           
             {hrvError && <Alert severity="error">{hrvError}</Alert>}
@@ -566,224 +571,25 @@ export default function DashboardPage({ onLogout }) {
             formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
           />
 
-          <Card>
-            <CardContent>
-              <Typography variant="h6" fontWeight={800} gutterBottom>
-                Resumen semanal
-              </Typography>
-
-              {weeklyLoading && (
-                <Typography color="text.secondary">
-                  Cargando resumen semanal...
-                </Typography>
-              )}
-
-              {weeklyError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {weeklyError}
-                </Alert>
-              )}
-
-              {!weeklyLoading && weeklyDays?.length === 0 && (
-                <Typography color="text.secondary">
-                  No hay información semanal disponible.
-                </Typography>
-              )}
-
-              {weeklyDays?.length > 0 && (
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Pasos semanales</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {formatNumber(weeklyTotalSteps)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {weekly?.from} - {weekly?.to}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Calorías semanales</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {formatNumber(weeklyTotalCalories)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Total acumulado
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Distancia semanal</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {formatDistanceMeters(weeklyTotalDistance)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Total acumulado
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Sueño semanal</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {formatSecondsToHoursMinutes(weeklyTotalSleepSeconds)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Score prom: {formatSleepScore(formatAvg(weeklyAvgSleepScore))}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Estrés promedio</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {formatAvg(weeklyAvgStress)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Promedio semanal
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Ritmo reposo prom.</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {weeklyAvgRestingHr ? `${formatAvg(weeklyAvgRestingHr)} bpm` : "N/A"}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Promedio semanal
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography color="text.secondary">Body Battery prom.</Typography>
-                        <Typography variant="h5" fontWeight={800}>
-                          {formatAvg(weeklyAvgBodyBattery)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Valor reciente promedio
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              )}
-
-              {weeklyDays?.length > 0 && (
-                <Box sx={{ mt: 3, overflowX: "auto" }}>
-                  <Box
-                    component="table"
-                    sx={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      minWidth: 760,
-                    }}
-                  >
-                    <Box component="thead">
-                      <Box component="tr">
-                        {[
-                          "Fecha",
-                          "Pasos",
-                          "Calorías",
-                          "Distancia",
-                          "Sueño",
-                          "Sleep Score",
-                          "Estrés",
-                          "RHR",
-                          "Body Battery",
-                        ].map((header) => (
-                          <Box
-                            component="th"
-                            key={header}
-                            sx={{
-                              textAlign: "left",
-                              p: 1.5,
-                              borderBottom: "1px solid",
-                              borderColor: "divider",
-                              color: "text.secondary",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {header}
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-
-                    <Box component="tbody">
-                      {weeklyDays?.map((item) => {
-                        const dailyItem = item.daily;
-                        const sleepItem = item.sleep?.dailySleepDTO;
-
-                        return (
-                          <Box component="tr" key={item.date}>
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {item.date}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {formatNumber(dailyItem?.totalSteps)}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {formatNumber(dailyItem?.totalKilocalories)}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {formatDistanceMeters(dailyItem?.totalDistanceMeters)}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {formatSecondsToHoursMinutes(sleepItem?.sleepTimeSeconds)}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {formatSleepScore(sleepItem?.sleepScores?.overall?.value)}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {dailyItem?.averageStressLevel ?? "N/A"}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {dailyItem?.restingHeartRate ? `${dailyItem.restingHeartRate} bpm` : "N/A"}
-                            </Box>
-
-                            <Box component="td" sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider" }}>
-                              {dailyItem?.bodyBatteryMostRecentValue ?? "N/A"}
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  </Box>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+          <WeeklySummary
+            weekly={weekly}
+            weeklyDays={weeklyDays}
+            weeklyLoading={weeklyLoading}
+            weeklyError={weeklyError}
+            weeklyTotalSteps={weeklyTotalSteps}
+            weeklyTotalCalories={weeklyTotalCalories}
+            weeklyTotalDistance={weeklyTotalDistance}
+            weeklyTotalSleepSeconds={weeklyTotalSleepSeconds}
+            weeklyAvgSleepScore={weeklyAvgSleepScore}
+            weeklyAvgStress={weeklyAvgStress}
+            weeklyAvgRestingHr={weeklyAvgRestingHr}
+            weeklyAvgBodyBattery={weeklyAvgBodyBattery}
+            formatNumber={formatNumber}
+            formatDistanceMeters={formatDistanceMeters}
+            formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
+            formatAvg={formatAvg}
+            formatSleepScore={formatSleepScore}
+          />
         </Stack>
       </Container>
     </Box>
