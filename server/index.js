@@ -205,6 +205,53 @@ app.get("/api/training-status", async (req, res) => {
   }
 });
 
+app.get("/api/health-garmin", async (req, res) => {
+  try {
+    const response = await fetch("https://connect.garmin.com");
+    res.json({
+      ok: true,
+      status: response.status,
+      statusText: response.statusText,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: String(error),
+    });
+  }
+});
+
+app.get("/api/debug-network", async (req, res) => {
+  const tests = [
+    "https://connect.garmin.com",
+    "https://sso.garmin.com",
+  ];
+
+  const results = [];
+
+  for (const url of tests) {
+    try {
+      const response = await fetch(url);
+      results.push({
+        url,
+        ok: true,
+        status: response.status,
+      });
+    } catch (error) {
+      results.push({
+        url,
+        ok: false,
+        error: String(error),
+      });
+    }
+  }
+
+  res.json({
+    ok: true,
+    results,
+  });
+});
+
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
