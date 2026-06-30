@@ -45,6 +45,14 @@ function runGarminCommand(args = [], env = {}) {
           });
         }
 
+        if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
+          return reject(
+            new Error(
+              "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
+            )
+          );
+        }
+
         if (error) {
           return reject(
             new Error(cleanStderr || cleanStdout || error.message)
