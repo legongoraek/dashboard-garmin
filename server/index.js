@@ -39,8 +39,17 @@ app.use(
 
 app.use(express.json());
 
+let loginBlockedUntil = null;
+
 app.post("/api/login", async (req, res) => {
   try {
+    if (loginBlockedUntil && Date.now() < loginBlockedUntil) {
+      return res.status(429).json({
+        ok: false,
+        error: "Login temporalmente bloqueado por límite de Garmin. Intenta más tarde.",
+      });
+    }
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -53,6 +62,9 @@ app.post("/api/login", async (req, res) => {
     const result = await loginGarmin(email, password);
     return res.json(result);
   } catch (error) {
+    if (error.message.includes("Garmin bloqueó temporalmente")) {
+      loginBlockedUntil = Date.now() + 15 * 60 * 1000;
+    }
     return res.status(500).json({
       ok: false,
       error: error.message,
