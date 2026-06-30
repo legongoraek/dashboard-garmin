@@ -11,6 +11,7 @@ import {
   Toolbar,
   Typography,
   Alert,
+  TextField,
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
@@ -30,6 +31,16 @@ import {
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function getPreviousDate(dateString, days = 1) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function getSevenDaysAgoFrom(dateString) {
+  return getPreviousDate(dateString, 6);
 }
 
 function getYesterday() {
@@ -156,8 +167,11 @@ export default function DashboardPage({ onLogout }) {
   const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [weeklyError, setWeeklyError] = useState("");
 
-  const today = getToday();
-  const sleepDate = getYesterday();
+  const [selectedDate, setSelectedDate] = useState(() => {
+    return localStorage.getItem("garmin_selected_date") || getToday();
+  });
+  const today = selectedDate;
+  const sleepDate = selectedDate;
 
   const loadDailySummary = async () => {
     try {
@@ -249,11 +263,11 @@ export default function DashboardPage({ onLogout }) {
       setActivitiesLoading(true);
       setActivitiesError("");
 
-      const from = getSevenDaysAgo();
+      const from = getSevenDaysAgoFrom(selectedDate);
 
       const response = await getActivities({
         from,
-        to: today,
+        to: selectedDate,
         limit: 5,
       });
 
@@ -320,6 +334,8 @@ export default function DashboardPage({ onLogout }) {
     "N/A";
 
   useEffect(() => {
+    localStorage.setItem("garmin_selected_date", selectedDate);
+
     loadDailySummary();
     loadSleepSummary();
     loadHrvSummary();
@@ -415,14 +431,38 @@ export default function DashboardPage({ onLogout }) {
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Stack spacing={3}>
-          <Box>
-            <Typography variant="h4" fontWeight={800}>
-              Resumen de hoy
-            </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              justifyContent: "space-between",
+              alignItems: { xs: "stretch", sm: "center" },
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography variant="h4" fontWeight={800}>
+                Resumen Garmin
+              </Typography>
 
-            <Typography color="text.secondary">
-              Información consultada desde Garmin Connect.
-            </Typography>
+              <Typography color="text.secondary">
+                Información consultada desde Garmin Connect.
+              </Typography>
+            </Box>
+
+            <TextField
+              type="date"
+              size="small"
+              label="Fecha"
+              value={selectedDate}
+              onChange={(event) => setSelectedDate(event.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              sx={{
+                minWidth: { xs: "100%", sm: 180 },
+              }}
+            />
           </Box>
 
           <Card>
