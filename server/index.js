@@ -18,6 +18,7 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "https://dashboard-garmin-azure.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -30,6 +31,9 @@ app.use(
 
       return callback(new Error("Origen no permitido por CORS"));
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 
