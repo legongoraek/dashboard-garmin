@@ -1,11 +1,21 @@
 import { execFile } from "child_process";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const GARMIN_SCRIPT_PATH = path.resolve(
-  "../ai-skill-garmin/skills/garmin-connect/scripts/garmin.ts"
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const GARMIN_PROJECT_PATH = path.resolve(
+  __dirname,
+  "../ai-skill-garmin/skills/garmin-connect"
 );
 
-const BUN_PATH = process.env.BUN_PATH || "bun" || process.env.BUN_COMMAND || "bun";
+const GARMIN_SCRIPT_PATH = path.resolve(
+  GARMIN_PROJECT_PATH,
+  "scripts/garmin.ts"
+);
+
+const BUN_PATH = process.env.BUN_PATH || process.env.BUN_COMMAND || "bun";
 
 function runGarminCommand(args = [], env = {}) {
   return new Promise((resolve, reject) => {
@@ -13,6 +23,7 @@ function runGarminCommand(args = [], env = {}) {
       BUN_PATH,
       ["run", GARMIN_SCRIPT_PATH, ...args],
       {
+        cwd: GARMIN_PROJECT_PATH,
         env: {
           ...process.env,
           ...env,
