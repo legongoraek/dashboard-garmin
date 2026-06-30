@@ -291,11 +291,13 @@ export default function MetricSlider({
             anchorEl={anchorEl}
             open={menuOpen}
             onClose={() => setAnchorEl(null)}
-            PaperProps={{
-              sx: {
-                width: 260,
-                maxHeight: 360,
-              },
+            slotProps={{
+                paper: {
+                sx: {
+                    width: 260,
+                    maxHeight: 360,
+                },
+                },
             }}
           >
             {items.map((item, index) => {
