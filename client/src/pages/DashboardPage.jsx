@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AppBar,
   Box,
@@ -143,6 +143,8 @@ function formatSleepScore(value) {
 }
 
 export default function DashboardPage({ onLogout }) {
+  const lastLoadedDateRef = useRef(null);
+
   const [daily, setDaily] = useState(null);
   const [dailyLoading, setDailyLoading] = useState(false);
   const [dailyError, setDailyError] = useState("");
@@ -332,9 +334,17 @@ export default function DashboardPage({ onLogout }) {
     readiness?.dailyTrainingReadinessDTO?.feedbackLong ||
     readiness?.dailyTrainingReadinessDTO?.feedbackShort ||
     "N/A";
-
+  
   useEffect(() => {
+    if (!selectedDate) return;
+
     localStorage.setItem("garmin_selected_date", selectedDate);
+
+    if (lastLoadedDateRef.current === selectedDate) {
+      return;
+    }
+
+    lastLoadedDateRef.current = selectedDate;
 
     loadDailySummary();
     loadSleepSummary();
@@ -342,7 +352,7 @@ export default function DashboardPage({ onLogout }) {
     loadReadinessSummary();
     loadActivities();
     loadWeeklySummary();
-  }, []);
+  }, [selectedDate]);
 
   const totalSteps = daily?.totalSteps;
   const totalCalories = daily?.totalKilocalories;
@@ -456,10 +466,13 @@ export default function DashboardPage({ onLogout }) {
               label="Fecha"
               value={selectedDate}
               onChange={(event) => setSelectedDate(event.target.value)}
-              InputLabelProps={{
-                shrink: true,
+              slotProps={{
+                inputLabel: {
+                  shrink: true,
+                },
               }}
               sx={{
+                width: { xs: "100%", sm: "auto" },
                 minWidth: { xs: "100%", sm: 180 },
               }}
             />
@@ -532,7 +545,7 @@ export default function DashboardPage({ onLogout }) {
               filterable
             />
           
-            {sleepError && <Alert severity="error">{sleepError}</Alert>}
+            {/* {sleepError && <Alert severity="error">{sleepError}</Alert>}
             {!sleepLoading && sleepDTO && sleepDTO?.sleepTimeSeconds === null && (
               <Alert severity="info">
                 Garmin no tiene datos de sueño registrados para esta fecha. Intenta
@@ -600,7 +613,7 @@ export default function DashboardPage({ onLogout }) {
                 },
               ]}
               type="hrv-readiness"
-            />
+            /> */}
           </Card>
 
           <RecentActivities

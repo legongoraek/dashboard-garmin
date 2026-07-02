@@ -4,92 +4,99 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_GARMIN_API_URL || "http://localhost:4000/api",
 });
 
-export async function loginGarmin(email, password) {
-  const response = await api.post("/login", {
-    email,
-    password,
-  });
-
-  return response.data;
+function getBackendError(error, fallbackMessage) {
+  return (
+    error?.response?.data?.error ||
+    error?.response?.data?.message ||
+    error?.message ||
+    fallbackMessage
+  );
 }
 
-export async function loginGarminMfa(email, password, mfaCode) {
-  const response = await api.post("/login/mfa", {
-    email,
-    password,
-    mfaCode,
-  });
+async function requestApi(requestFn, fallbackMessage) {
+  try {
+    const response = await requestFn();
+    const data = response.data;
 
-  return response.data;
+    if (data?.ok === false || data?.error) {
+      throw new Error(data?.error || fallbackMessage);
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(getBackendError(error, fallbackMessage), { cause: error });
+  }
 }
 
-export async function checkGarminSession() {
-  const response = await api.get("/session");
-  return response.data;
+export function loginGarmin(email, password) {
+  return requestApi(
+    () => api.post("/login", { email, password }),
+    "Error al iniciar sesión en Garmin"
+  );
 }
 
-export async function getDaily(date) {
-  const response = await api.get("/daily", {
-    params: { date },
-  });
-
-  return response.data;
+export function loginGarminMfa(email, password, mfaCode) {
+  return requestApi(
+    () => api.post("/login/mfa", { email, password, mfaCode }),
+    "Error al iniciar sesión en Garmin con MFA"
+  );
 }
 
-export async function getSleep(date) {
-  const response = await api.get("/sleep", {
-    params: { date },
-  });
-
-  return response.data;
+export function checkGarminSession() {
+  return requestApi(
+    () => api.get("/session"),
+    "Error al verificar la sesión de Garmin"
+  );
 }
 
-export async function getWeekly(date) {
-  const response = await api.get("/weekly", {
-    params: { date },
-  });
-
-  return response.data;
+export function getDaily(date) {
+  return requestApi(
+    () => api.get("/daily", { params: { date } }),
+    "Error al obtener los datos diarios"
+  );
 }
 
-export async function getActivities({ from, to, limit = 10 }) {
-  const response = await api.get("/activities", {
-    params: {
-      from,
-      to,
-      limit,
-    },
-  });
-
-  return response.data;
+export function getSleep(date) {
+  return requestApi(
+    () => api.get("/sleep", { params: { date } }),
+    "Error al obtener los datos de sueño"
+  );
 }
 
-export async function getHrv(date) {
-  const response = await api.get("/hrv", {
-    params: { date },
-  });
-
-  return response.data;
+export function getWeekly(date) {
+  return requestApi(
+    () => api.get("/weekly", { params: { date } }),
+    "Error al obtener los datos semanales"
+  );
 }
 
-export async function getReadiness(date) {
-  const response = await api.get("/readiness", {
-    params: { date },
-  });
+export function getActivities({ from, to, limit = 10 }) {
+  return requestApi(
+    () =>
+      api.get("/activities", {
+        params: { from, to, limit },
+      }),
+    "Error al obtener las actividades"
+  );
+}
 
-  return response.data;
+export function getHrv(date) {
+  return requestApi(
+    () => api.get("/hrv", { params: { date } }),
+    "Error al obtener los datos de HRV"
+  );
+}
+
+export function getReadiness(date) {
+  return requestApi(
+    () => api.get("/readiness", { params: { date } }),
+    "Error al obtener los datos de readiness"
+  );
 }
 
 export async function getTrainingStatus(date) {
-  console.log("Fetching training status for date:", date);
-  // const response = await api.get("/training-status", {
-  //   params: { date },
-  // });
-
-  // return response.data;
-  return {
-    trainingStatus: "Productive",
-    status: "Productive",
-    trainingStatusFeedbackPhrase: "You are in a productive state for training.",
-  };
+  return requestApi(
+    () => api.get("/training-status", { params: { date } }),
+    "Error al obtener los datos de estado de entrenamiento"
+  );
 }
