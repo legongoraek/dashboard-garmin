@@ -589,7 +589,7 @@ export default function DashboardPage({ onLogout }) {
               type="sleep"
               storageKey="garmin_sleep_metrics"
               filterable
-            />
+            /> */}
           
             {hrvError && <Alert severity="error">{hrvError}</Alert>}
             {readinessError && <Alert severity="error">{readinessError}</Alert>}
@@ -613,7 +613,7 @@ export default function DashboardPage({ onLogout }) {
                 },
               ]}
               type="hrv-readiness"
-            /> */}
+            />
           </Card>
 
           <RecentActivities
@@ -624,7 +624,7 @@ export default function DashboardPage({ onLogout }) {
             formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
           />
 
-          <WeeklySummary
+          {/* <WeeklySummary
             weekly={weekly}
             weeklyDays={weeklyDays}
             weeklyLoading={weeklyLoading}
@@ -642,7 +642,7 @@ export default function DashboardPage({ onLogout }) {
             formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
             formatAvg={formatAvg}
             formatSleepScore={formatSleepScore}
-          />
+          /> */}
         </Stack>
       </Container>
     </Box>
