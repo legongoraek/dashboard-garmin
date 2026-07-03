@@ -545,14 +545,14 @@ export default function DashboardPage({ onLogout }) {
               filterable
             />
           
-            {/* {sleepError && <Alert severity="error">{sleepError}</Alert>}
+            {sleepError && <Alert severity="error">{sleepError}</Alert>}
             {!sleepLoading && sleepDTO && sleepDTO?.sleepTimeSeconds === null && (
               <Alert severity="info">
                 Garmin no tiene datos de sueño registrados para esta fecha. Intenta
                 consultar el día anterior o revisa si el dispositivo registró sueño.
               </Alert>
             )}
-          
+
             <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 3, mb: 1 }}>
               Sueño
             </Typography>
@@ -589,7 +589,7 @@ export default function DashboardPage({ onLogout }) {
               type="sleep"
               storageKey="garmin_sleep_metrics"
               filterable
-            /> */}
+            />
           
             {hrvError && <Alert severity="error">{hrvError}</Alert>}
             {readinessError && <Alert severity="error">{readinessError}</Alert>}
@@ -624,7 +624,7 @@ export default function DashboardPage({ onLogout }) {
             formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
           />
 
-          {/* <WeeklySummary
+          <WeeklySummary
             weekly={weekly}
             weeklyDays={weeklyDays}
             weeklyLoading={weeklyLoading}
@@ -642,7 +642,7 @@ export default function DashboardPage({ onLogout }) {
             formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
             formatAvg={formatAvg}
             formatSleepScore={formatSleepScore}
-          /> */}
+          />
         </Stack>
       </Container>
     </Box>
