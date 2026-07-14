@@ -41,6 +41,10 @@ app.use(express.json());
 
 let loginBlockedUntil = null;
 
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
+});
+
 app.post("/api/login", async (req, res) => {
   try {
     if (loginBlockedUntil && Date.now() < loginBlockedUntil) {

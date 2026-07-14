@@ -4,6 +4,29 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_GARMIN_API_URL || "http://localhost:4000/api",
 });
 
+const WAKE_UP_TTL_MS = 5 * 60 * 1000;
+let wakeUpPromise = null;
+let backendAwakeUntil = 0;
+
+export function wakeUpBackend() {
+  if (Date.now() < backendAwakeUntil) {
+    return Promise.resolve();
+  }
+
+  if (!wakeUpPromise) {
+    wakeUpPromise = api
+      .get("/health", { timeout: 60_000 })
+      .then(() => {
+        backendAwakeUntil = Date.now() + WAKE_UP_TTL_MS;
+      })
+      .finally(() => {
+        wakeUpPromise = null;
+      });
+  }
+
+  return wakeUpPromise;
+}
+
 function getBackendError(error, fallbackMessage) {
   return (
     error?.response?.data?.error ||
@@ -15,6 +38,7 @@ function getBackendError(error, fallbackMessage) {
 
 async function requestApi(requestFn, fallbackMessage) {
   try {
+    await wakeUpBackend();
     const response = await requestFn();
     const data = response.data;
 

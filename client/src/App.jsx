@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
+import { wakeUpBackend } from "./services/garminApi";
 
 const theme = createTheme({
   palette: {
@@ -23,6 +24,12 @@ export default function App() {
   const [hasSession, setHasSession] = useState(
     () => localStorage.getItem("garmin_session") === "true",
   );
+
+  useEffect(() => {
+    wakeUpBackend().catch((error) => {
+      console.warn("No se pudo despertar el backend:", error);
+    });
+  }, []);
 
   const handleLoginSuccess = () => {
     localStorage.setItem("garmin_session", "true");
