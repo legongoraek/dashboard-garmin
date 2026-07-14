@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 
 import LoginPage from "./pages/LoginPage";
@@ -20,12 +20,9 @@ const theme = createTheme({
 });
 
 export default function App() {
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    const session = localStorage.getItem("garmin_session");
-    setHasSession(session === "true");
-  }, []);
+  const [hasSession, setHasSession] = useState(
+    () => localStorage.getItem("garmin_session") === "true",
+  );
 
   const handleLoginSuccess = () => {
     localStorage.setItem("garmin_session", "true");

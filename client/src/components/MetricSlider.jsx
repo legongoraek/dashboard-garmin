@@ -83,58 +83,36 @@ export default function MetricSlider({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [visibleKeys, setVisibleKeys] = useState(null);
-
   const currentStyle = sliderStyles[type] || sliderStyles.default;
 
   const allKeys = useMemo(() => {
     return items.map((item, index) => getItemKey(item, index));
   }, [items]);
 
-  useEffect(() => {
-    if (!filterable || !storageKey) {
-      setVisibleKeys(null);
-      return;
-    }
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [visibleKeys, setVisibleKeys] = useState(() =>
+    filterable ? readStoredVisibleKeys(storageKey) : null,
+  );
 
-    const storedKeys = readStoredVisibleKeys(storageKey);
+  const effectiveVisibleKeys = useMemo(() => {
+    if (!filterable || !visibleKeys) return allKeys;
 
-    if (!storedKeys) {
-      setVisibleKeys(allKeys);
-      return;
-    }
-
-    /**
-     * Esto evita que el storage quede viejo si luego agregas o renombras métricas.
-     * Solo conserva keys que todavía existen.
-     */
-    const validStoredKeys = storedKeys.filter((key) => allKeys.includes(key));
-
-    if (validStoredKeys.length === 0) {
-      setVisibleKeys(allKeys);
-      saveVisibleKeys(storageKey, allKeys);
-      return;
-    }
-
-    setVisibleKeys(validStoredKeys);
-  }, [filterable, storageKey, allKeys]);
+    const validKeys = visibleKeys.filter((key) => allKeys.includes(key));
+    return validKeys.length > 0 ? validKeys : allKeys;
+  }, [allKeys, filterable, visibleKeys]);
 
   const filteredItems = useMemo(() => {
     if (!filterable) return items;
-    if (!visibleKeys) return items;
-
     return items.filter((item, index) => {
       const key = getItemKey(item, index);
-      return visibleKeys.includes(key);
+      return effectiveVisibleKeys.includes(key);
     });
-  }, [items, filterable, visibleKeys]);
+  }, [items, filterable, effectiveVisibleKeys]);
 
   const hasCustomFilter =
     filterable &&
-    visibleKeys &&
     allKeys.length > 0 &&
-    visibleKeys.length !== allKeys.length;
+    effectiveVisibleKeys.length !== allKeys.length;
 
   const updateScrollState = () => {
     const el = scrollRef.current;
@@ -240,7 +218,7 @@ export default function MetricSlider({
                 display: { xs: "none", sm: "block" },
                 mr: "auto",
             }}>
-              Mostrando {visibleKeys.length} de {allKeys.length}
+              Mostrando {effectiveVisibleKeys.length} de {allKeys.length}
             </Typography>
           )}
 
@@ -302,9 +280,9 @@ export default function MetricSlider({
           >
             {items.map((item, index) => {
               const key = getItemKey(item, index);
-              const checked = (visibleKeys || allKeys).includes(key);
+              const checked = effectiveVisibleKeys.includes(key);
               const disableUncheck =
-                checked && (visibleKeys || allKeys).length === 1;
+                checked && effectiveVisibleKeys.length === 1;
 
               return (
                 <MenuItem

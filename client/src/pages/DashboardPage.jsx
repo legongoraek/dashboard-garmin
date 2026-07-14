@@ -1,21 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AppBar,
   Box,
   Button,
   Card,
-  CardContent,
   Container,
-  Grid,
   Stack,
   Toolbar,
   Typography,
   Alert,
   TextField,
 } from "@mui/material";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
-import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import MetricSlider from "../components/MetricSlider";
 import RecentActivities from "../components/RecentActivities";
 import WeeklySummary from "../components/WeeklySummary";
@@ -41,18 +36,6 @@ function getPreviousDate(dateString, days = 1) {
 
 function getSevenDaysAgoFrom(dateString) {
   return getPreviousDate(dateString, 6);
-}
-
-function getYesterday() {
-  const date = new Date();
-  date.setDate(date.getDate() - 1);
-  return date.toISOString().slice(0, 10);
-}
-
-function getSevenDaysAgo() {
-  const date = new Date();
-  date.setDate(date.getDate() - 7);
-  return date.toISOString().slice(0, 10);
 }
 
 function formatNumber(value) {
@@ -175,7 +158,7 @@ export default function DashboardPage({ onLogout }) {
   const today = selectedDate;
   const sleepDate = selectedDate;
 
-  const loadDailySummary = async () => {
+  const loadDailySummary = useCallback(async () => {
     try {
       setDailyLoading(true);
       setDailyError("");
@@ -195,9 +178,9 @@ export default function DashboardPage({ onLogout }) {
     } finally {
       setDailyLoading(false);
     }
-  };
+  }, [today]);
 
-  const loadSleepSummary = async () => {
+  const loadSleepSummary = useCallback(async () => {
     try {
       setSleepLoading(true);
       setSleepError("");
@@ -218,9 +201,9 @@ export default function DashboardPage({ onLogout }) {
     } finally {
       setSleepLoading(false);
     }
-  };
+  }, [sleepDate]);
 
-  const loadHrvSummary = async () => {
+  const loadHrvSummary = useCallback(async () => {
     try {
       setHrvLoading(true);
       setHrvError("");
@@ -237,9 +220,9 @@ export default function DashboardPage({ onLogout }) {
     } finally {
       setHrvLoading(false);
     }
-  };
+  }, [today]);
 
-  const loadReadinessSummary = async () => {
+  const loadReadinessSummary = useCallback(async () => {
     try {
       setReadinessLoading(true);
       setReadinessError("");
@@ -258,9 +241,9 @@ export default function DashboardPage({ onLogout }) {
     } finally {
       setReadinessLoading(false);
     }
-  };
+  }, [today]);
 
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async () => {
     try {
       setActivitiesLoading(true);
       setActivitiesError("");
@@ -287,9 +270,9 @@ export default function DashboardPage({ onLogout }) {
     } finally {
       setActivitiesLoading(false);
     }
-  };
+  }, [selectedDate]);
 
-  const loadWeeklySummary = async () => {
+  const loadWeeklySummary = useCallback(async () => {
     try {
       setWeeklyLoading(true);
       setWeeklyError("");
@@ -308,7 +291,7 @@ export default function DashboardPage({ onLogout }) {
     } finally {
       setWeeklyLoading(false);
     }
-  };
+  }, [today]);
 
   const hrvValue =
     hrv?.lastNightAvg ||
@@ -352,7 +335,15 @@ export default function DashboardPage({ onLogout }) {
     loadReadinessSummary();
     loadActivities();
     loadWeeklySummary();
-  }, [selectedDate]);
+  }, [
+    loadActivities,
+    loadDailySummary,
+    loadHrvSummary,
+    loadReadinessSummary,
+    loadSleepSummary,
+    loadWeeklySummary,
+    selectedDate,
+  ]);
 
   const totalSteps = daily?.totalSteps;
   const totalCalories = daily?.totalKilocalories;
