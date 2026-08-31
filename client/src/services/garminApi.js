@@ -1,7 +1,9 @@
 import axios from "axios";
+import { cachedRequest, ttlForDate, SHORT_TTL_MS } from "./cache.js";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_GARMIN_API_URL || "http://localhost:4000/api",
+  baseURL: import.meta.env.VITE_GARMIN_API_URL || "/api",
+  withCredentials: true,
 });
 
 const WAKE_UP_TTL_MS = 5 * 60 * 1000;
@@ -74,53 +76,67 @@ export function checkGarminSession() {
 }
 
 export function getDaily(date) {
-  return requestApi(
-    () => api.get("/daily", { params: { date } }),
-    "Error al obtener los datos diarios"
+  return cachedRequest(`daily:${date ?? "latest"}`, ttlForDate(date), () =>
+    requestApi(
+      () => api.get("/daily", { params: { date } }),
+      "Error al obtener los datos diarios"
+    )
   );
 }
 
 export function getSleep(date) {
-  return requestApi(
-    () => api.get("/sleep", { params: { date } }),
-    "Error al obtener los datos de sueño"
+  return cachedRequest(`sleep:${date ?? "latest"}`, ttlForDate(date), () =>
+    requestApi(
+      () => api.get("/sleep", { params: { date } }),
+      "Error al obtener los datos de sueño"
+    )
   );
 }
 
 export function getWeekly(date) {
-  return requestApi(
-    () => api.get("/weekly", { params: { date } }),
-    "Error al obtener los datos semanales"
+  return cachedRequest(`weekly:${date ?? "latest"}`, ttlForDate(date), () =>
+    requestApi(
+      () => api.get("/weekly", { params: { date } }),
+      "Error al obtener los datos semanales"
+    )
   );
 }
 
 export function getActivities({ from, to, limit = 10 }) {
-  return requestApi(
+  return cachedRequest(
+    `activities:${from ?? ""}:${to ?? ""}:${limit}`,
+    SHORT_TTL_MS,
     () =>
-      api.get("/activities", {
-        params: { from, to, limit },
-      }),
-    "Error al obtener las actividades"
+      requestApi(
+        () => api.get("/activities", { params: { from, to, limit } }),
+        "Error al obtener las actividades"
+      )
   );
 }
 
 export function getHrv(date) {
-  return requestApi(
-    () => api.get("/hrv", { params: { date } }),
-    "Error al obtener los datos de HRV"
+  return cachedRequest(`hrv:${date ?? "latest"}`, ttlForDate(date), () =>
+    requestApi(
+      () => api.get("/hrv", { params: { date } }),
+      "Error al obtener los datos de HRV"
+    )
   );
 }
 
 export function getReadiness(date) {
-  return requestApi(
-    () => api.get("/readiness", { params: { date } }),
-    "Error al obtener los datos de readiness"
+  return cachedRequest(`readiness:${date ?? "latest"}`, ttlForDate(date), () =>
+    requestApi(
+      () => api.get("/readiness", { params: { date } }),
+      "Error al obtener los datos de readiness"
+    )
   );
 }
 
 export async function getTrainingStatus(date) {
-  return requestApi(
-    () => api.get("/training-status", { params: { date } }),
-    "Error al obtener los datos de estado de entrenamiento"
+  return cachedRequest(`training-status:${date ?? "latest"}`, ttlForDate(date), () =>
+    requestApi(
+      () => api.get("/training-status", { params: { date } }),
+      "Error al obtener los datos de estado de entrenamiento"
+    )
   );
 }
