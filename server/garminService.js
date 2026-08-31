@@ -1,8 +1,7 @@
 import { execFile } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
-import { restoreConfig, persistConfig } from "./garminConfigStore.js";
-import { withCache } from "./cache.js";
+import { writeTokens, readTokens } from "./garminConfigStore.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,94 +18,72 @@ const GARMIN_SCRIPT_PATH = path.resolve(
 
 const BUN_PATH = process.env.BUN_PATH || process.env.BUN_COMMAND || "bun";
 
-const SHORT_CACHE_TTL_SECONDS = 5 * 60;
-const LONG_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60;
-
-let restorePromise;
-
-function restoreOnce() {
-  if (!restorePromise) {
-    restorePromise = restoreConfig();
+async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
+  if (incomingTokens) {
+    await writeTokens(incomingTokens);
   }
-  return restorePromise;
-}
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
+  return new Promise((resolve, reject) => {
+    execFile(
+      BUN_PATH,
+      ["run", GARMIN_SCRIPT_PATH, ...args],
+      {
+        cwd: GARMIN_PROJECT_PATH,
+        env: {
+          ...process.env,
+          ...env,
+        },
+      },
+      async (error, stdout, stderr) => {
+        const cleanStdout = stdout?.trim();
+        const cleanStderr = stderr?.trim();
 
-function ttlForDate(date) {
-  return !date || date === todayStr() ? SHORT_CACHE_TTL_SECONDS : LONG_CACHE_TTL_SECONDS;
-}
+        const fullOutput = [cleanStdout, cleanStderr]
+          .filter(Boolean)
+          .join("\n");
 
-function runGarminCommand(args = [], env = {}) {
-  return restoreOnce().then(
-    () =>
-      new Promise((resolve, reject) => {
-        execFile(
-          BUN_PATH,
-          ["run", GARMIN_SCRIPT_PATH, ...args],
-          {
-            cwd: GARMIN_PROJECT_PATH,
-            env: {
-              ...process.env,
-              ...env,
-            },
-          },
-          async (error, stdout, stderr) => {
-            const cleanStdout = stdout?.trim();
-            const cleanStderr = stderr?.trim();
+        if (fullOutput.includes("MFA required")) {
+          return resolve({
+            ok: false,
+            requiresMfa: true,
+            message: "Garmin requiere código MFA",
+          });
+        }
 
-            const fullOutput = [cleanStdout, cleanStderr]
-              .filter(Boolean)
-              .join("\n");
+        if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
+          return reject(
+            new Error(
+              "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
+            )
+          );
+        }
 
-            if (fullOutput.includes("MFA required")) {
-              return resolve({
-                ok: false,
-                requiresMfa: true,
-                message: "Garmin requiere código MFA",
-              });
-            }
+        if (error) {
+          return reject(
+            new Error(cleanStderr || cleanStdout || error.message)
+          );
+        }
 
-            if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
-              return reject(
-                new Error(
-                  "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
-                )
-              );
-            }
+        const tokens = await readTokens();
 
-            if (error) {
-              return reject(
-                new Error(cleanStderr || cleanStdout || error.message)
-              );
-            }
+        try {
+          const data = cleanStdout ? JSON.parse(cleanStdout) : null;
 
-            try {
-              await persistConfig();
-            } catch {
-              // persistConfig() is designed to never throw, but guard anyway —
-              // an unhandled rejection here would leave this Promise unsettled forever.
-            }
-
-            try {
-              const data = cleanStdout ? JSON.parse(cleanStdout) : null;
-
-              return resolve({
-                ok: true,
-                data,
-              });
-            } catch {
-              return resolve({
-                ok: true,
-                data: cleanStdout,
-              });
-            }
-          }
-        );
-      })
-  );
+          return resolve({
+            ok: true,
+            data,
+            tokens,
+          });
+        } catch {
+          return resolve({
+            ok: true,
+            data: cleanStdout,
+            tokens,
+          });
+        }
+      }
+    );
+  });
 }
 
 export async function loginGarmin(email, password) {
@@ -123,11 +100,12 @@ export async function loginGarmin(email, password) {
     ok: true,
     authenticated: true,
     message: "Sesión iniciada correctamente",
+    tokens: result.tokens,
   };
 }
 
 export async function loginGarminWithMfa(email, password, mfaCode) {
-  await runGarminCommand(["login"], {
+  const result = await runGarminCommand(["login"], {
     GARMIN_EMAIL: email,
     GARMIN_PASSWORD: password,
     GARMIN_MFA: mfaCode,
@@ -137,38 +115,34 @@ export async function loginGarminWithMfa(email, password, mfaCode) {
     ok: true,
     authenticated: true,
     message: "Sesión iniciada correctamente",
+    tokens: result.tokens,
   };
 }
 
-export async function checkSession() {
-  const result = await runGarminCommand(["whoami"]);
+export async function checkSession(incomingTokens) {
+  const result = await runGarminCommand(["whoami"], {}, incomingTokens);
 
   return {
     ok: true,
     authenticated: true,
     user: result.data,
+    tokens: result.tokens,
   };
 }
 
-export async function getDailySummary(date) {
-  return withCache(`daily:${date ?? "latest"}`, ttlForDate(date), () =>
-    runGarminCommand(["daily", date, "--pretty"])
-  );
+export async function getDailySummary(date, incomingTokens) {
+  return runGarminCommand(["daily", date, "--pretty"], {}, incomingTokens);
 }
 
-export async function getSleepSummary(date) {
-  return withCache(`sleep:${date ?? "latest"}`, ttlForDate(date), () =>
-    runGarminCommand(["sleep", date, "--pretty"])
-  );
+export async function getSleepSummary(date, incomingTokens) {
+  return runGarminCommand(["sleep", date, "--pretty"], {}, incomingTokens);
 }
 
-export async function getWeeklySummary(date) {
-  return withCache(`weekly:${date ?? "latest"}`, ttlForDate(date), () =>
-    runGarminCommand(["weekly", date, "--pretty"])
-  );
+export async function getWeeklySummary(date, incomingTokens) {
+  return runGarminCommand(["weekly", date, "--pretty"], {}, incomingTokens);
 }
 
-export async function getActivities({ from, to, limit = 10 }) {
+export async function getActivities({ from, to, limit = 10 }, incomingTokens) {
   const args = ["activities"];
 
   if (from) {
@@ -185,25 +159,17 @@ export async function getActivities({ from, to, limit = 10 }) {
 
   args.push("--pretty");
 
-  return withCache(`activities:${from ?? ""}:${to ?? ""}:${limit}`, SHORT_CACHE_TTL_SECONDS, () =>
-    runGarminCommand(args)
-  );
+  return runGarminCommand(args, {}, incomingTokens);
 }
 
-export async function getHrvSummary(date) {
-  return withCache(`hrv:${date ?? "latest"}`, ttlForDate(date), () =>
-    runGarminCommand(["hrv", date, "--pretty"])
-  );
+export async function getHrvSummary(date, incomingTokens) {
+  return runGarminCommand(["hrv", date, "--pretty"], {}, incomingTokens);
 }
 
-export async function getTrainingReadiness(date) {
-  return withCache(`readiness:${date ?? "latest"}`, ttlForDate(date), () =>
-    runGarminCommand(["readiness", date, "--pretty"])
-  );
+export async function getTrainingReadiness(date, incomingTokens) {
+  return runGarminCommand(["readiness", date, "--pretty"], {}, incomingTokens);
 }
 
-export async function getTrainingStatus(date) {
-  return withCache(`training-status:${date ?? "latest"}`, ttlForDate(date), () =>
-    runGarminCommand(["training-status", date, "--pretty"])
-  );
+export async function getTrainingStatus(date, incomingTokens) {
+  return runGarminCommand(["training-status", date, "--pretty"], {}, incomingTokens);
 }
