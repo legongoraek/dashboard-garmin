@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import {
   loginGarmin,
@@ -38,6 +39,34 @@ app.use(
 );
 
 app.use(express.json());
+app.use(cookieParser());
+
+const isProd = process.env.NODE_ENV === "production";
+const TOKENS_COOKIE = "garmin_tokens";
+const TOKENS_COOKIE_MAX_AGE_MS = 400 * 24 * 60 * 60 * 1000;
+
+function setTokensCookie(res, tokens) {
+  if (!tokens) return;
+
+  res.cookie(TOKENS_COOKIE, JSON.stringify(tokens), {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    maxAge: TOKENS_COOKIE_MAX_AGE_MS,
+    path: "/",
+  });
+}
+
+function getIncomingTokens(req) {
+  const raw = req.cookies?.[TOKENS_COOKIE];
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 let loginBlockedUntil = null;
 
@@ -63,8 +92,9 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    const result = await loginGarmin(email, password);
-    return res.json(result);
+    const { tokens, ...body } = await loginGarmin(email, password);
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     if (error.message.includes("Garmin bloqueó temporalmente")) {
       loginBlockedUntil = Date.now() + 15 * 60 * 1000;
@@ -87,8 +117,9 @@ app.post("/api/login/mfa", async (req, res) => {
       });
     }
 
-    const result = await loginGarminWithMfa(email, password, mfaCode);
-    return res.json(result);
+    const { tokens, ...body } = await loginGarminWithMfa(email, password, mfaCode);
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -99,8 +130,9 @@ app.post("/api/login/mfa", async (req, res) => {
 
 app.get("/api/session", async (req, res) => {
   try {
-    const result = await checkSession();
-    return res.json(result);
+    const { tokens, ...body } = await checkSession(getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch {
     return res.status(401).json({
       ok: false,
@@ -112,8 +144,9 @@ app.get("/api/session", async (req, res) => {
 app.get("/api/daily", async (req, res) => {
   try {
     const { date } = req.query;
-    const result = await getDailySummary(date);
-    return res.json(result);
+    const { tokens, ...body } = await getDailySummary(date, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -125,8 +158,9 @@ app.get("/api/daily", async (req, res) => {
 app.get("/api/sleep", async (req, res) => {
   try {
     const { date } = req.query;
-    const result = await getSleepSummary(date);
-    return res.json(result);
+    const { tokens, ...body } = await getSleepSummary(date, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -138,8 +172,9 @@ app.get("/api/sleep", async (req, res) => {
 app.get("/api/weekly", async (req, res) => {
   try {
     const { date } = req.query;
-    const result = await getWeeklySummary(date);
-    return res.json(result);
+    const { tokens, ...body } = await getWeeklySummary(date, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -152,13 +187,12 @@ app.get("/api/activities", async (req, res) => {
   try {
     const { from, to, limit } = req.query;
 
-    const result = await getActivities({
-      from,
-      to,
-      limit,
-    });
-
-    return res.json(result);
+    const { tokens, ...body } = await getActivities(
+      { from, to, limit },
+      getIncomingTokens(req)
+    );
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -170,9 +204,9 @@ app.get("/api/activities", async (req, res) => {
 app.get("/api/hrv", async (req, res) => {
   try {
     const { date } = req.query;
-    const result = await getHrvSummary(date);
-
-    return res.json(result);
+    const { tokens, ...body } = await getHrvSummary(date, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -184,9 +218,9 @@ app.get("/api/hrv", async (req, res) => {
 app.get("/api/readiness", async (req, res) => {
   try {
     const { date } = req.query;
-    const result = await getTrainingReadiness(date);
-
-    return res.json(result);
+    const { tokens, ...body } = await getTrainingReadiness(date, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
@@ -198,9 +232,9 @@ app.get("/api/readiness", async (req, res) => {
 app.get("/api/training-status", async (req, res) => {
   try {
     const { date } = req.query;
-    const result = await getTrainingStatus(date);
-
-    return res.json(result);
+    const { tokens, ...body } = await getTrainingStatus(date, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
   } catch (error) {
     return res.status(500).json({
       ok: false,
