@@ -1,6 +1,8 @@
 import { execFile } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
+import { restoreConfig, persistConfig } from "./garminConfigStore.js";
+import { withCache } from "./cache.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,64 +19,80 @@ const GARMIN_SCRIPT_PATH = path.resolve(
 
 const BUN_PATH = process.env.BUN_PATH || process.env.BUN_COMMAND || "bun";
 
+const SHORT_CACHE_TTL_SECONDS = 5 * 60;
+const LONG_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function ttlForDate(date) {
+  return !date || date === todayStr() ? SHORT_CACHE_TTL_SECONDS : LONG_CACHE_TTL_SECONDS;
+}
+
 function runGarminCommand(args = [], env = {}) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      BUN_PATH,
-      ["run", GARMIN_SCRIPT_PATH, ...args],
-      {
-        cwd: GARMIN_PROJECT_PATH,
-        env: {
-          ...process.env,
-          ...env,
-        },
-      },
-      (error, stdout, stderr) => {
-        const cleanStdout = stdout?.trim();
-        const cleanStderr = stderr?.trim();
+  return restoreConfig().then(
+    () =>
+      new Promise((resolve, reject) => {
+        execFile(
+          BUN_PATH,
+          ["run", GARMIN_SCRIPT_PATH, ...args],
+          {
+            cwd: GARMIN_PROJECT_PATH,
+            env: {
+              ...process.env,
+              ...env,
+            },
+          },
+          async (error, stdout, stderr) => {
+            const cleanStdout = stdout?.trim();
+            const cleanStderr = stderr?.trim();
 
-        const fullOutput = [cleanStdout, cleanStderr]
-          .filter(Boolean)
-          .join("\n");
+            const fullOutput = [cleanStdout, cleanStderr]
+              .filter(Boolean)
+              .join("\n");
 
-        if (fullOutput.includes("MFA required")) {
-          return resolve({
-            ok: false,
-            requiresMfa: true,
-            message: "Garmin requiere código MFA",
-          });
-        }
+            if (fullOutput.includes("MFA required")) {
+              return resolve({
+                ok: false,
+                requiresMfa: true,
+                message: "Garmin requiere código MFA",
+              });
+            }
 
-        if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
-          return reject(
-            new Error(
-              "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
-            )
-          );
-        }
+            if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
+              return reject(
+                new Error(
+                  "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
+                )
+              );
+            }
 
-        if (error) {
-          return reject(
-            new Error(cleanStderr || cleanStdout || error.message)
-          );
-        }
+            if (error) {
+              return reject(
+                new Error(cleanStderr || cleanStdout || error.message)
+              );
+            }
 
-        try {
-          const data = cleanStdout ? JSON.parse(cleanStdout) : null;
+            await persistConfig();
 
-          return resolve({
-            ok: true,
-            data,
-          });
-        } catch {
-          return resolve({
-            ok: true,
-            data: cleanStdout,
-          });
-        }
-      }
-    );
-  });
+            try {
+              const data = cleanStdout ? JSON.parse(cleanStdout) : null;
+
+              return resolve({
+                ok: true,
+                data,
+              });
+            } catch {
+              return resolve({
+                ok: true,
+                data: cleanStdout,
+              });
+            }
+          }
+        );
+      })
+  );
 }
 
 export async function loginGarmin(email, password) {
@@ -119,15 +137,21 @@ export async function checkSession() {
 }
 
 export async function getDailySummary(date) {
-  return runGarminCommand(["daily", date, "--pretty"]);
+  return withCache(`daily:${date ?? "latest"}`, ttlForDate(date), () =>
+    runGarminCommand(["daily", date, "--pretty"])
+  );
 }
 
 export async function getSleepSummary(date) {
-  return runGarminCommand(["sleep", date, "--pretty"]);
+  return withCache(`sleep:${date ?? "latest"}`, ttlForDate(date), () =>
+    runGarminCommand(["sleep", date, "--pretty"])
+  );
 }
 
 export async function getWeeklySummary(date) {
-  return runGarminCommand(["weekly", date, "--pretty"]);
+  return withCache(`weekly:${date ?? "latest"}`, ttlForDate(date), () =>
+    runGarminCommand(["weekly", date, "--pretty"])
+  );
 }
 
 export async function getActivities({ from, to, limit = 10 }) {
@@ -147,17 +171,25 @@ export async function getActivities({ from, to, limit = 10 }) {
 
   args.push("--pretty");
 
-  return runGarminCommand(args);
+  return withCache(`activities:${from ?? ""}:${to ?? ""}:${limit}`, SHORT_CACHE_TTL_SECONDS, () =>
+    runGarminCommand(args)
+  );
 }
 
 export async function getHrvSummary(date) {
-  return runGarminCommand(["hrv", date, "--pretty"]);
+  return withCache(`hrv:${date ?? "latest"}`, ttlForDate(date), () =>
+    runGarminCommand(["hrv", date, "--pretty"])
+  );
 }
 
 export async function getTrainingReadiness(date) {
-  return runGarminCommand(["readiness", date, "--pretty"]);
+  return withCache(`readiness:${date ?? "latest"}`, ttlForDate(date), () =>
+    runGarminCommand(["readiness", date, "--pretty"])
+  );
 }
 
 export async function getTrainingStatus(date) {
-  return runGarminCommand(["training-status", date, "--pretty"]);
+  return withCache(`training-status:${date ?? "latest"}`, ttlForDate(date), () =>
+    runGarminCommand(["training-status", date, "--pretty"])
+  );
 }
