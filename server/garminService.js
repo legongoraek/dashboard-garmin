@@ -74,7 +74,12 @@ function runGarminCommand(args = [], env = {}) {
               );
             }
 
-            await persistConfig();
+            try {
+              await persistConfig();
+            } catch {
+              // persistConfig() is designed to never throw, but guard anyway —
+              // an unhandled rejection here would leave this Promise unsettled forever.
+            }
 
             try {
               const data = cleanStdout ? JSON.parse(cleanStdout) : null;
