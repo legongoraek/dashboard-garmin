@@ -33,13 +33,13 @@ test("cachedRequest returns the cached value without calling fetchFn on a hit", 
   let calls = 0;
   const fetchFn = async () => {
     calls += 1;
-    return { sleep: 7 };
+    return { ok: true, data: { sleep: 7 } };
   };
 
   await cachedRequest("daily:2026-08-25", 60_000, fetchFn);
   const second = await cachedRequest("daily:2026-08-25", 60_000, fetchFn);
 
-  assert.deepEqual(second, { sleep: 7 });
+  assert.deepEqual(second, { ok: true, data: { sleep: 7 } });
   assert.equal(calls, 1);
 });
 
@@ -58,6 +58,24 @@ test("cachedRequest treats an expired entry as a miss", async () => {
 
   assert.equal(calls, 2);
   assert.deepEqual(second, { sleep: 2 });
+});
+
+test("cachedRequest does not cache a null-data response", async () => {
+  installFakeLocalStorage();
+  const { cachedRequest } = await import("./cache.js");
+
+  let calls = 0;
+  const fetchFn = async () => {
+    calls += 1;
+    return { ok: true, data: null };
+  };
+
+  const first = await cachedRequest("daily:2026-08-25", 60_000, fetchFn);
+  const second = await cachedRequest("daily:2026-08-25", 60_000, fetchFn);
+
+  assert.deepEqual(first, { ok: true, data: null });
+  assert.deepEqual(second, { ok: true, data: null });
+  assert.equal(calls, 2);
 });
 
 test("ttlForDate: past date gets the long TTL, today and future get the short one", async () => {

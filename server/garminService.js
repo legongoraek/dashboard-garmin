@@ -19,7 +19,7 @@ const GARMIN_SCRIPT_PATH = path.resolve(
 const BUN_PATH = process.env.BUN_PATH || process.env.BUN_COMMAND || "bun";
 
 async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
-  if (incomingTokens) {
+  if (incomingTokens && !(await readTokens())) {
     await writeTokens(incomingTokens);
   }
 

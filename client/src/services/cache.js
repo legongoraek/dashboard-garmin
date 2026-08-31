@@ -27,10 +27,12 @@ export async function cachedRequest(key, ttlMs, fetchFn) {
 
   const value = await fetchFn();
 
-  try {
-    localStorage.setItem(cacheKey, JSON.stringify({ expiresAt: Date.now() + ttlMs, value }));
-  } catch {
-    // localStorage full or unavailable (private browsing) — non-fatal, just skip caching
+  if (value?.data != null) {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ expiresAt: Date.now() + ttlMs, value }));
+    } catch {
+      // localStorage full or unavailable (private browsing) — non-fatal, just skip caching
+    }
   }
 
   return value;

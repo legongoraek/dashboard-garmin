@@ -41,14 +41,21 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV !== "development";
 const TOKENS_COOKIE = "garmin_tokens";
 const TOKENS_COOKIE_MAX_AGE_MS = 400 * 24 * 60 * 60 * 1000;
 
 function setTokensCookie(res, tokens) {
   if (!tokens) return;
 
-  res.cookie(TOKENS_COOKIE, JSON.stringify(tokens), {
+  const value = JSON.stringify(tokens);
+  if (value.length > 3500) {
+    console.warn(
+      `[cookie] garmin_tokens is ${value.length} bytes raw — near the ~4KB browser per-cookie limit once URL-encoded.`
+    );
+  }
+
+  res.cookie(TOKENS_COOKIE, value, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
