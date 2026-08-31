@@ -16,7 +16,9 @@ function fakeClient(initial = {}) {
 }
 
 test("withCache returns the cached value without calling fn on a hit", async () => {
-  const client = fakeClient({ "cache:daily:2026-08-25": { sleep: 7 } });
+  const client = fakeClient({
+    "cache:daily:2026-08-25": { ok: true, data: { sleep: 7 } },
+  });
   let called = false;
 
   const result = await withCache(
@@ -24,28 +26,41 @@ test("withCache returns the cached value without calling fn on a hit", async () 
     60,
     async () => {
       called = true;
-      return { sleep: 0 };
+      return { ok: true, data: { sleep: 0 } };
     },
     client
   );
 
-  assert.deepEqual(result, { sleep: 7 });
+  assert.deepEqual(result, { ok: true, data: { sleep: 7 } });
   assert.equal(called, false);
 });
 
 test("withCache calls fn and stores the result on a miss", async () => {
   const client = fakeClient();
 
-  const result = await withCache("daily:2026-08-26", 60, async () => ({ sleep: 8 }), client);
+  const result = await withCache(
+    "daily:2026-08-26",
+    60,
+    async () => ({ ok: true, data: { sleep: 8 } }),
+    client
+  );
 
-  assert.deepEqual(result, { sleep: 8 });
-  assert.deepEqual(client.store["cache:daily:2026-08-26"], { sleep: 8 });
+  assert.deepEqual(result, { ok: true, data: { sleep: 8 } });
+  assert.deepEqual(client.store["cache:daily:2026-08-26"], {
+    ok: true,
+    data: { sleep: 8 },
+  });
 });
 
 test("withCache falls back to fn when client is null", async () => {
-  const result = await withCache("daily:2026-08-27", 60, async () => ({ sleep: 9 }), null);
+  const result = await withCache(
+    "daily:2026-08-27",
+    60,
+    async () => ({ ok: true, data: { sleep: 9 } }),
+    null
+  );
 
-  assert.deepEqual(result, { sleep: 9 });
+  assert.deepEqual(result, { ok: true, data: { sleep: 9 } });
 });
 
 test("withCache falls back to fn when the read fails", async () => {
@@ -56,9 +71,14 @@ test("withCache falls back to fn when the read fails", async () => {
     async set() {},
   };
 
-  const result = await withCache("daily:2026-08-28", 60, async () => ({ sleep: 10 }), client);
+  const result = await withCache(
+    "daily:2026-08-28",
+    60,
+    async () => ({ ok: true, data: { sleep: 10 } }),
+    client
+  );
 
-  assert.deepEqual(result, { sleep: 10 });
+  assert.deepEqual(result, { ok: true, data: { sleep: 10 } });
 });
 
 test("withCache still returns fn's result when the write fails", async () => {
@@ -71,7 +91,46 @@ test("withCache still returns fn's result when the write fails", async () => {
     },
   };
 
-  const result = await withCache("daily:2026-08-29", 60, async () => ({ sleep: 11 }), client);
+  const result = await withCache(
+    "daily:2026-08-29",
+    60,
+    async () => ({ ok: true, data: { sleep: 11 } }),
+    client
+  );
 
-  assert.deepEqual(result, { sleep: 11 });
+  assert.deepEqual(result, { ok: true, data: { sleep: 11 } });
+});
+
+test("withCache does not cache an MFA-required failure response", async () => {
+  const client = fakeClient();
+  const mfaResponse = {
+    ok: false,
+    requiresMfa: true,
+    message: "Garmin requiere código MFA",
+  };
+
+  const result = await withCache(
+    "daily:2026-08-30",
+    60,
+    async () => mfaResponse,
+    client
+  );
+
+  assert.deepEqual(result, mfaResponse);
+  assert.equal("cache:daily:2026-08-30" in client.store, false);
+});
+
+test("withCache does not cache an empty success response", async () => {
+  const client = fakeClient();
+  const emptyResponse = { ok: true, data: null };
+
+  const result = await withCache(
+    "daily:2026-08-31",
+    60,
+    async () => emptyResponse,
+    client
+  );
+
+  assert.deepEqual(result, emptyResponse);
+  assert.equal("cache:daily:2026-08-31" in client.store, false);
 });

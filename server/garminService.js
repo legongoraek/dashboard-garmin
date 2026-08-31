@@ -22,6 +22,15 @@ const BUN_PATH = process.env.BUN_PATH || process.env.BUN_COMMAND || "bun";
 const SHORT_CACHE_TTL_SECONDS = 5 * 60;
 const LONG_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60;
 
+let restorePromise;
+
+function restoreOnce() {
+  if (!restorePromise) {
+    restorePromise = restoreConfig();
+  }
+  return restorePromise;
+}
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -31,7 +40,7 @@ function ttlForDate(date) {
 }
 
 function runGarminCommand(args = [], env = {}) {
-  return restoreConfig().then(
+  return restoreOnce().then(
     () =>
       new Promise((resolve, reject) => {
         execFile(

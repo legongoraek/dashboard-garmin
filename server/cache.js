@@ -1,5 +1,9 @@
 import { redis } from "./redisClient.js";
 
+function isCacheable(value) {
+  return value?.ok === true && value.data != null;
+}
+
 export async function withCache(key, ttlSeconds, fn, client = redis) {
   if (!client) return fn();
 
@@ -14,10 +18,12 @@ export async function withCache(key, ttlSeconds, fn, client = redis) {
 
   const value = await fn();
 
-  try {
-    await client.set(cacheKey, value, { ex: ttlSeconds });
-  } catch (error) {
-    console.warn(`[cache] write failed for ${cacheKey}: ${error.message}`);
+  if (isCacheable(value)) {
+    try {
+      await client.set(cacheKey, value, { ex: ttlSeconds });
+    } catch (error) {
+      console.warn(`[cache] write failed for ${cacheKey}: ${error.message}`);
+    }
   }
 
   return value;

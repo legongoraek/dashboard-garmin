@@ -2,7 +2,15 @@ import { Redis } from "@upstash/redis";
 
 export const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? Redis.fromEnv()
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+        retry: {
+          retries: 1,
+          backoff: () => 100,
+        },
+        signal: () => AbortSignal.timeout(2000),
+      })
     : null;
 
 if (!redis) {
