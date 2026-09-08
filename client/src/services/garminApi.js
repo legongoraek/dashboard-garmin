@@ -2,7 +2,7 @@ import axios from "axios";
 import { cachedRequest, ttlForDate, SHORT_TTL_MS, PERMANENT_TTL_MS } from "./cache.js";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_GARMIN_API_URL || "/api",
+  baseURL: (typeof import.meta?.env?.VITE_GARMIN_API_URL === 'string' ? import.meta.env.VITE_GARMIN_API_URL : process.env.VITE_GARMIN_API_URL) || "/api",
   withCredentials: true,
 });
 
