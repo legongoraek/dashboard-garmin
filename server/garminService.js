@@ -18,6 +18,21 @@ const GARMIN_SCRIPT_PATH = path.resolve(
 
 const BUN_PATH = process.env.BUN_PATH || process.env.BUN_COMMAND || "bun";
 
+function cleanErrorMessage(rawMessage) {
+  if (!rawMessage) return rawMessage;
+
+  if (rawMessage.includes("INVALID_USERNAME_PASSWORD")) {
+    return "Usuario o contraseña de Garmin incorrectos.";
+  }
+
+  const failedMatch = rawMessage.match(/\[garmin\] FAILED:\s*(.+)/s);
+  if (failedMatch) {
+    return failedMatch[1].trim();
+  }
+
+  return rawMessage;
+}
+
 async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
   if (incomingTokens && !(await readTokens())) {
     await writeTokens(incomingTokens);
@@ -60,7 +75,7 @@ async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
 
         if (error) {
           return reject(
-            new Error(cleanStderr || cleanStdout || error.message)
+            new Error(cleanErrorMessage(cleanStderr || cleanStdout || error.message))
           );
         }
 
