@@ -66,6 +66,7 @@ async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
         }
 
         if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
+          console.error(`[garmin] rate-limit detected in output: ${fullOutput}`);
           return reject(
             new Error(
               "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
