@@ -12,6 +12,7 @@ import {
   getHrvSummary,
   getTrainingReadiness,
   getTrainingStatus,
+  getActivityDetail,
   checkSession,
 } from "./garminService.js";
 
@@ -247,6 +248,22 @@ app.get("/api/training-status", async (req, res) => {
       ok: false,
       error: error.message,
     });
+  }
+});
+
+app.get("/api/activity-detail", async (req, res) => {
+  try {
+    const { activityId } = req.query;
+
+    if (!activityId) {
+      return res.status(400).json({ ok: false, error: "Falta activityId" });
+    }
+
+    const { tokens, ...body } = await getActivityDetail(activityId, getIncomingTokens(req));
+    setTokensCookie(res, tokens);
+    return res.json(body);
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 

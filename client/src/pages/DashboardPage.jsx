@@ -14,6 +14,7 @@ import {
 import MetricSlider from "../components/MetricSlider";
 import RecentActivities from "../components/RecentActivities";
 import WeeklySummary from "../components/WeeklySummary";
+import TrainingHeatmap from "../components/TrainingHeatmap";
 
 import {
   getActivities,
@@ -23,6 +24,7 @@ import {
   getHrv,
   getReadiness,
 } from "../services/garminApi";
+import { loadHeatmapPoints } from "../services/heatmapData";
 
 function getToday() {
   return new Date().toISOString().slice(0, 10);
@@ -158,6 +160,13 @@ export default function DashboardPage({ onLogout }) {
   const today = selectedDate;
   const sleepDate = selectedDate;
 
+  const [heatmapFrom, setHeatmapFrom] = useState(() => getSevenDaysAgoFrom(getToday()));
+  const [heatmapTo, setHeatmapTo] = useState(() => getToday());
+  const [heatmapLoading, setHeatmapLoading] = useState(false);
+  const [heatmapProgress, setHeatmapProgress] = useState(null);
+  const [heatmapError, setHeatmapError] = useState(null);
+  const [heatmapResult, setHeatmapResult] = useState(null);
+
   const loadDailySummary = useCallback(async () => {
     try {
       setDailyLoading(true);
@@ -292,6 +301,31 @@ export default function DashboardPage({ onLogout }) {
       setWeeklyLoading(false);
     }
   }, [today]);
+
+  const handleLoadHeatmap = useCallback(async () => {
+    setHeatmapLoading(true);
+    setHeatmapError(null);
+    setHeatmapProgress(null);
+
+    try {
+      const result = await loadHeatmapPoints(
+        { from: heatmapFrom, to: heatmapTo },
+        (current, total) => setHeatmapProgress({ current, total })
+      );
+
+      if (result.rateLimited) {
+        setHeatmapError(
+          "Garmin bloqueó temporalmente las solicitudes. Espera unos minutos antes de reintentar."
+        );
+      }
+
+      setHeatmapResult(result);
+    } catch (error) {
+      setHeatmapError(error.message);
+    } finally {
+      setHeatmapLoading(false);
+    }
+  }, [heatmapFrom, heatmapTo]);
 
   const hrvValue =
     hrv?.lastNightAvg ||
@@ -613,6 +647,18 @@ export default function DashboardPage({ onLogout }) {
             activitiesError={activitiesError}
             formatDistanceMeters={formatDistanceMeters}
             formatSecondsToHoursMinutes={formatSecondsToHoursMinutes}
+          />
+
+          <TrainingHeatmap
+            from={heatmapFrom}
+            to={heatmapTo}
+            onFromChange={setHeatmapFrom}
+            onToChange={setHeatmapTo}
+            onLoad={handleLoadHeatmap}
+            loading={heatmapLoading}
+            progress={heatmapProgress}
+            error={heatmapError}
+            result={heatmapResult}
           />
 
           <WeeklySummary

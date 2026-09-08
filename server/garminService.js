@@ -173,3 +173,7 @@ export async function getTrainingReadiness(date, incomingTokens) {
 export async function getTrainingStatus(date, incomingTokens) {
   return runGarminCommand(["training-status", date, "--pretty"], {}, incomingTokens);
 }
+
+export async function getActivityDetail(activityId, incomingTokens) {
+  return runGarminCommand(["activity-detail", activityId, "--max-points", "100", "--pretty"], {}, incomingTokens);
+}
