@@ -7,24 +7,36 @@ import {
   CardContent,
   CircularProgress,
   Container,
+  IconButton,
+  InputAdornment,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 import { loginGarmin, loginGarminMfa } from "../services/garminApi";
 
 export default function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [requiresMfa, setRequiresMfa] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleLogin = async () => {
+    const errors = {};
+    if (!email.trim()) errors.email = "Ingresa tu email de Garmin";
+    if (!password) errors.password = "Ingresa tu password de Garmin";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     try {
       setLoading(true);
       setError("");
@@ -40,13 +52,19 @@ export default function LoginPage({ onLoginSuccess }) {
         onLoginSuccess();
       }
     } catch (err) {
-      setError(err.response?.data?.error || "No se pudo iniciar sesión");
+      setError(err.message || "No se pudo iniciar sesión");
     } finally {
       setLoading(false);
     }
   };
 
   const handleMfa = async () => {
+    if (!mfaCode.trim()) {
+      setFieldErrors({ mfaCode: "Ingresa el código MFA" });
+      return;
+    }
+    setFieldErrors({});
+
     try {
       setLoading(true);
       setError("");
@@ -57,7 +75,7 @@ export default function LoginPage({ onLoginSuccess }) {
         onLoginSuccess();
       }
     } catch (err) {
-      setError(err.response?.data?.error || "No se pudo validar el código MFA");
+      setError(err.message || "No se pudo validar el código MFA");
     } finally {
       setLoading(false);
     }
@@ -94,15 +112,45 @@ export default function LoginPage({ onLoginSuccess }) {
                     label="Email Garmin"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    error={Boolean(fieldErrors.email)}
+                    helperText={fieldErrors.email}
                     fullWidth
                   />
 
                   <TextField
                     label="Password Garmin"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
+                    error={Boolean(fieldErrors.password)}
+                    helperText={fieldErrors.password}
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              type="button"
+                              aria-label={
+                                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                              }
+                              aria-pressed={showPassword}
+                              edge="end"
+                              onClick={() => setShowPassword((visible) => !visible)}
+                              onMouseDown={(event) => event.preventDefault()}
+                            >
+                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
                     fullWidth
                   />
 
@@ -124,7 +172,12 @@ export default function LoginPage({ onLoginSuccess }) {
                   <TextField
                     label="Código MFA"
                     value={mfaCode}
-                    onChange={(e) => setMfaCode(e.target.value)}
+                    onChange={(e) => {
+                      setMfaCode(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, mfaCode: undefined }));
+                    }}
+                    error={Boolean(fieldErrors.mfaCode)}
+                    helperText={fieldErrors.mfaCode}
                     fullWidth
                   />
 
