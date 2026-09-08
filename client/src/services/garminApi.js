@@ -1,5 +1,5 @@
 import axios from "axios";
-import { cachedRequest, ttlForDate, SHORT_TTL_MS } from "./cache.js";
+import { cachedRequest, ttlForDate, SHORT_TTL_MS, PERMANENT_TTL_MS } from "./cache.js";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_GARMIN_API_URL || "/api",
@@ -137,6 +137,15 @@ export async function getTrainingStatus(date) {
     requestApi(
       () => api.get("/training-status", { params: { date } }),
       "Error al obtener los datos de estado de entrenamiento"
+    )
+  );
+}
+
+export function getActivityDetail(activityId) {
+  return cachedRequest(`activity-detail:${activityId}`, PERMANENT_TTL_MS, () =>
+    requestApi(
+      () => api.get("/activity-detail", { params: { activityId } }),
+      "Error al obtener el detalle de la actividad"
     )
   );
 }

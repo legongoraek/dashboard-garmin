@@ -1,5 +1,6 @@
 const SHORT_TTL_MS = 5 * 60 * 1000;
 const LONG_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const PERMANENT_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
