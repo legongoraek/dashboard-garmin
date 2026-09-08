@@ -53,28 +53,33 @@ async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
         const cleanStdout = stdout?.trim();
         const cleanStderr = stderr?.trim();
 
-        const fullOutput = [cleanStdout, cleanStderr]
-          .filter(Boolean)
-          .join("\n");
-
-        if (fullOutput.includes("MFA required")) {
-          return resolve({
-            ok: false,
-            requiresMfa: true,
-            message: "Garmin requiere código MFA",
-          });
-        }
-
-        if (fullOutput.includes("429") || fullOutput.toLowerCase().includes("rate limited")) {
-          console.error(`[garmin] rate-limit detected in output: ${fullOutput}`);
-          return reject(
-            new Error(
-              "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
-            )
-          );
-        }
-
+        // These checks only make sense on a failed run (non-zero exit) — the
+        // script's own MFA/rate-limit signals are only ever printed to
+        // stderr on that path (see garmin.ts's main().catch()). Checking
+        // fullOutput unconditionally (including a *successful* run's stdout
+        // data) caused real fitness data containing "429" as a coincidental
+        // substring — a timestamp, a distance, a heart rate — to be
+        // misdetected as a Garmin rate-limit on an otherwise-successful call.
         if (error) {
+          const errorOutput = [cleanStderr, cleanStdout].filter(Boolean).join("\n");
+
+          if (errorOutput.includes("MFA required")) {
+            return resolve({
+              ok: false,
+              requiresMfa: true,
+              message: "Garmin requiere código MFA",
+            });
+          }
+
+          if (errorOutput.includes("429") || errorOutput.toLowerCase().includes("rate limited")) {
+            console.error(`[garmin] rate-limit detected in output: ${errorOutput}`);
+            return reject(
+              new Error(
+                "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
+              )
+            );
+          }
+
           return reject(
             new Error(cleanErrorMessage(cleanStderr || cleanStdout || error.message))
           );
