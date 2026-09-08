@@ -57,8 +57,7 @@ export default function TrainingHeatmap({
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
-          sx={{ mb: 2 }}
-          alignItems={{ sm: "center" }}
+          sx={{ mb: 2, alignItems: { sm: "center" } }}
         >
           <TextField
             type="date"
