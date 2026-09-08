@@ -70,6 +70,29 @@ test("truncated is true when the activity count hits MAX_ACTIVITIES", async () =
   assert.equal(result.truncated, true);
 });
 
+test("stops the loop and reports rateLimited on a Garmin rate-limit error, without counting it as a skip", async () => {
+  const getActivities = fakeActivities(["a1", "a2", "a3"]);
+  const getActivityDetail = async (activityId) => {
+    if (activityId === "a2") {
+      throw new Error(
+        "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
+      );
+    }
+    return { ok: true, data: { activityId, points: [{ lat: 1, lon: 1 }] } };
+  };
+
+  const result = await loadHeatmapPoints(
+    { from: "2026-08-01", to: "2026-08-31" },
+    undefined,
+    getActivities,
+    getActivityDetail
+  );
+
+  assert.equal(result.rateLimited, true);
+  assert.equal(result.skippedCount, 0);
+  assert.deepEqual(result.points, [[1, 1]]);
+});
+
 test("calls onProgress once per activity with the running count and total", async () => {
   const getActivities = fakeActivities(["a1", "a2", "a3"]);
   const getActivityDetail = async (activityId) => ({

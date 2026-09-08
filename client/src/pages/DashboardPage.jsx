@@ -312,6 +312,13 @@ export default function DashboardPage({ onLogout }) {
         { from: heatmapFrom, to: heatmapTo },
         (current, total) => setHeatmapProgress({ current, total })
       );
+
+      if (result.rateLimited) {
+        setHeatmapError(
+          "Garmin bloqueó temporalmente las solicitudes. Espera unos minutos antes de reintentar."
+        );
+      }
+
       setHeatmapResult(result);
     } catch (error) {
       setHeatmapError(error.message);

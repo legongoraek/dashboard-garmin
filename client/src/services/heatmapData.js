@@ -13,9 +13,11 @@ export async function loadHeatmapPoints(
 
   const points = [];
   let skippedCount = 0;
+  let rateLimited = false;
 
   for (let i = 0; i < activities.length; i++) {
     const activity = activities[i];
+    let stop = false;
 
     try {
       const detail = await getActivityDetailFn(activity.activityId);
@@ -26,11 +28,17 @@ export async function loadHeatmapPoints(
           points.push([point.lat, point.lon]);
         }
       }
-    } catch {
-      skippedCount += 1;
+    } catch (error) {
+      if (error?.message?.includes("bloqueó temporalmente")) {
+        rateLimited = true;
+        stop = true;
+      } else {
+        skippedCount += 1;
+      }
     }
 
     onProgress?.(i + 1, activities.length);
+    if (stop) break;
   }
 
   return {
@@ -38,5 +46,6 @@ export async function loadHeatmapPoints(
     activitiesCount: activities.length,
     skippedCount,
     truncated: activities.length >= MAX_ACTIVITIES,
+    rateLimited,
   };
 }
