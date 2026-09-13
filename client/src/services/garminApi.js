@@ -44,7 +44,7 @@ async function requestApi(requestFn, fallbackMessage) {
     const response = await requestFn();
     const data = response.data;
 
-    if (data?.ok === false || data?.error) {
+    if ((data?.ok === false || data?.error) && !data?.requiresMfa) {
       throw new Error(data?.error || fallbackMessage);
     }
 
