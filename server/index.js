@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import providerRoutes from "./providerRoutes.js";
 
 import {
   loginGarmin,
@@ -41,6 +42,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use("/api", providerRoutes);
 
 const isProd = process.env.NODE_ENV !== "development";
 const TOKENS_COOKIE = "garmin_tokens";
@@ -156,10 +158,7 @@ app.get("/api/daily", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
@@ -170,10 +169,7 @@ app.get("/api/sleep", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
@@ -184,28 +180,18 @@ app.get("/api/weekly", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
 app.get("/api/activities", async (req, res) => {
   try {
     const { from, to, limit } = req.query;
-
-    const { tokens, ...body } = await getActivities(
-      { from, to, limit },
-      getIncomingTokens(req)
-    );
+    const { tokens, ...body } = await getActivities({ from, to, limit }, getIncomingTokens(req));
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
@@ -216,10 +202,7 @@ app.get("/api/hrv", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
@@ -230,10 +213,7 @@ app.get("/api/readiness", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
@@ -244,21 +224,14 @@ app.get("/api/training-status", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message,
-    });
+    return res.status(500).json({ ok: false, error: error.message });
   }
 });
 
 app.get("/api/activity-detail", async (req, res) => {
   try {
     const { activityId } = req.query;
-
-    if (!activityId) {
-      return res.status(400).json({ ok: false, error: "Falta activityId" });
-    }
-
+    if (!activityId) return res.status(400).json({ ok: false, error: "Falta activityId" });
     const { tokens, ...body } = await getActivityDetail(activityId, getIncomingTokens(req));
     setTokensCookie(res, tokens);
     return res.json(body);
@@ -270,48 +243,24 @@ app.get("/api/activity-detail", async (req, res) => {
 app.get("/api/health-garmin", async (req, res) => {
   try {
     const response = await fetch("https://connect.garmin.com");
-    res.json({
-      ok: true,
-      status: response.status,
-      statusText: response.statusText,
-    });
+    res.json({ ok: true, status: response.status, statusText: response.statusText });
   } catch (error) {
-    res.status(500).json({
-      ok: false,
-      error: String(error),
-    });
+    res.status(500).json({ ok: false, error: String(error) });
   }
 });
 
 app.get("/api/debug-network", async (req, res) => {
-  const tests = [
-    "https://connect.garmin.com",
-    "https://sso.garmin.com",
-  ];
-
+  const tests = ["https://connect.garmin.com", "https://sso.garmin.com"];
   const results = [];
-
   for (const url of tests) {
     try {
       const response = await fetch(url);
-      results.push({
-        url,
-        ok: true,
-        status: response.status,
-      });
+      results.push({ url, ok: true, status: response.status });
     } catch (error) {
-      results.push({
-        url,
-        ok: false,
-        error: String(error),
-      });
+      results.push({ url, ok: false, error: String(error) });
     }
   }
-
-  res.json({
-    ok: true,
-    results,
-  });
+  res.json({ ok: true, results });
 });
 
 const PORT = process.env.PORT || 4000;
