@@ -18,6 +18,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CloudSyncIcon from "@mui/icons-material/CloudSync";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { useNavigate } from "react-router-dom";
+import LocalArchiveControls from "../components/LocalArchiveControls.jsx";
 import LocalMultisourceInsights from "../components/analytics/LocalMultisourceInsights.jsx";
 import { parseGpxToCanonical } from "../providers/gpxProvider.js";
 import { parseFitToCanonical } from "../providers/fitProvider.js";
@@ -281,6 +282,8 @@ export default function DataSourcesPage() {
               </Stack>
             </CardContent>
           </Card>
+
+          <LocalArchiveControls onChanged={refresh} />
 
           <LocalMultisourceInsights refreshToken={insightsVersion} />
 
