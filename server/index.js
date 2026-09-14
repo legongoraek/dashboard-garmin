@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { pathToFileURL } from "node:url";
 import providerRoutes from "./providerRoutes.js";
+import { attachGracefulShutdown } from "./runtimeLifecycle.js";
 
 import {
   loginGarmin,
@@ -275,5 +276,6 @@ export function startServer(port = process.env.PORT || 4000, { logger = console 
 
 const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : null;
 if (invokedPath === import.meta.url) {
-  startServer();
+  const server = startServer();
+  attachGracefulShutdown({ server });
 }
