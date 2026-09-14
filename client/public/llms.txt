@@ -17,9 +17,13 @@ Garmin Dashboard centraliza información de actividad, salud, entrenamiento y ru
 - Visualización de datos relacionados con salud y entrenamiento.
 - Visualización de rutas y datos geográficos asociados a actividades cuando están disponibles.
 
+## Public landing and authenticated area
+
+La landing pública en `/` explica el alcance y la arquitectura del proyecto sin consultar información personal. El acceso a datos de Garmin Connect ocurre únicamente dentro del área autenticada en `/dashboard`, después del flujo de `/login`.
+
 ## Access and privacy
 
-La página pública describe la aplicación. Los datos personales del dashboard requieren autenticación y no forman parte del contenido público destinado a indexación.
+La landing pública describe la aplicación. Los datos personales del dashboard requieren autenticación y no forman parte del contenido público destinado a indexación.
 
 ## Important clarification
 
