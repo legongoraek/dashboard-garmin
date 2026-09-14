@@ -17,10 +17,11 @@ function officialGarminReadiness(env = process.env) {
 
 export function buildProviderReadiness(
   env = process.env,
-  { stravaAuthorized = false } = {}
+  { stravaAuthorized = false, databaseConnectionVerified = false } = {}
 ) {
   const strava = getStravaReadiness(env);
   const databaseUrlPresent = Boolean(env.DATABASE_URL);
+  const postgresPostgisConfigured = databaseUrlPresent;
 
   return {
     ok: true,
@@ -40,10 +41,13 @@ export function buildProviderReadiness(
     persistence: {
       browserIndexedDb: true,
       databaseUrlPresent,
-      postgresPostgisConfigured: false,
-      blocker: databaseUrlPresent
-        ? "PostgreSQL schema is ready, but a runtime pg adapter is not installed yet"
-        : "DATABASE_URL and a runtime pg adapter are required for server persistence",
+      runtimeInstalled: true,
+      postgresPostgisConfigured,
+      connectionVerified: Boolean(databaseConnectionVerified),
+      migration: "server/migrations/001_analytics_postgis.sql",
+      blocker: postgresPostgisConfigured
+        ? null
+        : "DATABASE_URL is required to activate PostgreSQL/PostGIS persistence",
     },
   };
 }
