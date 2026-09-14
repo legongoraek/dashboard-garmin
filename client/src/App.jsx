@@ -6,6 +6,7 @@ import SourcesShortcut from "./components/SourcesShortcut";
 import ActivityExplorerPage from "./pages/ActivityExplorerPage";
 import DashboardPage from "./pages/DashboardPage";
 import DataSourcesPage from "./pages/DataSourcesPage";
+import ImportedActivityPage from "./pages/ImportedActivityPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import { wakeUpBackend } from "./services/garminApi";
@@ -40,7 +41,8 @@ export default function App() {
       location.pathname === "/login" ||
       location.pathname === "/dashboard" ||
       location.pathname === "/sources" ||
-      location.pathname.startsWith("/activities/")
+      location.pathname.startsWith("/activities/") ||
+      location.pathname.startsWith("/imported/")
     ) {
       wakeUpBackend().catch((error) => {
         console.warn("No se pudo despertar el backend:", error);
@@ -80,6 +82,7 @@ export default function App() {
         />
         <Route path="/dashboard" element={requireSession(<DashboardPage onLogout={handleLogout} />)} />
         <Route path="/activities/:id" element={requireSession(<ActivityExplorerPage />)} />
+        <Route path="/imported/:id" element={requireSession(<ImportedActivityPage />)} />
         <Route path="/sources" element={requireSession(<DataSourcesPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
