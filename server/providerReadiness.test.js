@@ -15,8 +15,16 @@ test("keeps official Garmin blocked until approval and credentials exist", () =>
   assert.match(result.providers.garmin_official.blocker, /Developer Program/i);
 });
 
-test("does not claim PostgreSQL runtime persistence from DATABASE_URL alone", () => {
+test("reports PostgreSQL runtime as configured when DATABASE_URL is present", () => {
   const result = buildProviderReadiness({ DATABASE_URL: "postgres://example" });
   assert.equal(result.persistence.databaseUrlPresent, true);
+  assert.equal(result.persistence.runtimeInstalled, true);
+  assert.equal(result.persistence.postgresPostgisConfigured, true);
+  assert.equal(result.persistence.connectionVerified, false);
+});
+
+test("keeps PostgreSQL disabled when DATABASE_URL is absent", () => {
+  const result = buildProviderReadiness({});
   assert.equal(result.persistence.postgresPostgisConfigured, false);
+  assert.match(result.persistence.blocker, /DATABASE_URL/);
 });
