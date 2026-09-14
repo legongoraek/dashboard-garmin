@@ -33,11 +33,7 @@ function config(env = process.env) {
 
 export function getStravaAuthorizationUrl(state, env = process.env) {
   const current = config(env);
-  return buildStravaAuthorizationUrl({
-    clientId: current.clientId,
-    redirectUri: current.redirectUri,
-    state,
-  });
+  return buildStravaAuthorizationUrl({ clientId: current.clientId, redirectUri: current.redirectUri, state });
 }
 
 export async function exchangeStravaCode(code, env = process.env, fetchFn = fetch) {
@@ -45,12 +41,7 @@ export async function exchangeStravaCode(code, env = process.env, fetchFn = fetc
   const response = await fetchFn(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: current.clientId,
-      client_secret: current.clientSecret,
-      code,
-      grant_type: "authorization_code",
-    }),
+    body: JSON.stringify({ client_id: current.clientId, client_secret: current.clientSecret, code, grant_type: "authorization_code" }),
   });
   if (!response.ok) throw new Error(`Strava token exchange failed: ${response.status}`);
   return response.json();
@@ -61,12 +52,7 @@ export async function refreshStravaToken(refreshToken, env = process.env, fetchF
   const response = await fetchFn(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: current.clientId,
-      client_secret: current.clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
+    body: JSON.stringify({ client_id: current.clientId, client_secret: current.clientSecret, refresh_token: refreshToken, grant_type: "refresh_token" }),
   });
   if (!response.ok) throw new Error(`Strava token refresh failed: ${response.status}`);
   return response.json();
@@ -81,9 +67,7 @@ export async function ensureStravaAccessToken(tokens, env = process.env, fetchFn
 
 async function stravaGet(path, tokens, env = process.env, fetchFn = fetch) {
   const currentTokens = await ensureStravaAccessToken(tokens, env, fetchFn);
-  const response = await fetchFn(`${API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${currentTokens.access_token}` },
-  });
+  const response = await fetchFn(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${currentTokens.access_token}` } });
   if (response.status === 401) throw new Error("Strava authorization required");
   if (response.status === 429) throw new Error("Strava rate limited");
   if (!response.ok) throw new Error(`Strava request failed: ${response.status}`);
@@ -96,10 +80,10 @@ export function getStravaActivities(tokens, { before, after, page = 1, perPage =
   if (after) params.set("after", String(after));
   params.set("page", String(page));
   params.set("per_page", String(perPage));
-  return stravaGet(`/api/v3/athlete/activities?${params}`, tokens, env, fetchFn);
+  return stravaGet(`/athlete/activities?${params}`, tokens, env, fetchFn);
 }
 
 export function getStravaActivityStreams(tokens, activityId, env, fetchFn) {
   const keys = "time,distance,latlng,altitude,velocity_smooth,heartrate,cadence,watts,temp";
-  return stravaGet(`/api/v3/activities/${encodeURIComponent(activityId)}/streams?keys=${encodeURIComponent(keys)}&key_by_type=true`, tokens, env, fetchFn);
+  return stravaGet(`/activities/${encodeURIComponent(activityId)}/streams?keys=${encodeURIComponent(keys)}&key_by_type=true`, tokens, env, fetchFn);
 }
