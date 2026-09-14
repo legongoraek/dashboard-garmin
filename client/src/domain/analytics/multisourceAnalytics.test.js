@@ -36,6 +36,21 @@ test("fingerprint groups equivalent activities across providers", () => {
   assert.equal(activityFingerprint(garmin), activityFingerprint(strava));
 });
 
+test("fingerprint prefers UTC when providers represent the same instant with different local times", () => {
+  const garmin = activity({
+    startedAtLocal: "2026-09-10T06:00:00",
+    startedAtUtc: "2026-09-10T12:00:00Z",
+  });
+  const strava = activity({
+    activityUid: "strava:timezone",
+    source: "strava",
+    startedAtLocal: "2026-09-10T07:00:00",
+    startedAtUtc: "2026-09-10T12:00:20Z",
+  });
+
+  assert.equal(activityFingerprint(garmin), activityFingerprint(strava));
+});
+
 test("dedup keeps one logical activity, preserves evidence, prefers the richest record, and fills its missing metrics from other sources", () => {
   const garmin = activity({
     avgHeartRateBpm: 152,
@@ -70,6 +85,7 @@ test("dedup does not merge different activities just because date and sport matc
     activityUid: "strava:evening",
     source: "strava",
     startedAtLocal: "2026-09-10T18:00:00",
+    startedAtUtc: "2026-09-11T00:00:00Z",
     durationS: 3600,
     distanceM: 10000,
   });
@@ -79,7 +95,7 @@ test("dedup does not merge different activities just because date and sport matc
 
 test("YoY compares weekly canonical volume without requesting provider data", () => {
   const rows = [
-    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-05T06:00:00", distanceM: 12000, durationS: 3600 }),
+    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-05T06:00:00", startedAtUtc: "2026-01-05T12:00:00Z", distanceM: 12000, durationS: 3600 }),
     activity({ activityUid: "2025-a", startedAtLocal: "2025-01-06T06:00:00", startedAtUtc: "2025-01-06T12:00:00Z", distanceM: 10000, durationS: 3300 }),
   ];
 
@@ -92,8 +108,8 @@ test("YoY compares weekly canonical volume without requesting provider data", ()
 
 test("YoY summary compares current YTD with the equivalent previous-year window", () => {
   const rows = [
-    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", distanceM: 10000, durationS: 3600 }),
-    activity({ activityUid: "2026-b", startedAtLocal: "2026-02-10T06:00:00", distanceM: 5000, durationS: 1800, elevationGainM: null }),
+    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", startedAtUtc: "2026-01-10T12:00:00Z", distanceM: 10000, durationS: 3600 }),
+    activity({ activityUid: "2026-b", startedAtLocal: "2026-02-10T06:00:00", startedAtUtc: "2026-02-10T12:00:00Z", distanceM: 5000, durationS: 1800, elevationGainM: null }),
     activity({ activityUid: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", distanceM: 8000, durationS: 3200 }),
   ];
 
@@ -107,7 +123,7 @@ test("YoY summary compares current YTD with the equivalent previous-year window"
 
 test("YoY summary keeps all-missing metrics null", () => {
   const rows = [
-    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", elevationGainM: null }),
+    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", startedAtUtc: "2026-01-10T12:00:00Z", elevationGainM: null }),
     activity({ activityUid: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", elevationGainM: null }),
   ];
 
