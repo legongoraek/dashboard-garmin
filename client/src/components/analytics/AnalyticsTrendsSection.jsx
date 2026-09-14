@@ -8,6 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import MultisourceLocalAnalytics from "./MultisourceLocalAnalytics";
 import PeriodSelector from "./PeriodSelector";
 import RecoveryTrends from "./RecoveryTrends";
 import TrainingTrends from "./TrainingTrends";
@@ -52,58 +53,62 @@ export default function AnalyticsTrendsSection({ endDate }) {
   const hasAnyData = hasTrainingData || hasRecoveryData;
 
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={3}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", md: "row" },
-              gap: 2,
-              justifyContent: "space-between",
-              alignItems: { xs: "stretch", md: "center" },
-            }}
-          >
-            <Box>
-              <Typography variant="h5" fontWeight={800}>
-                Analítica histórica
-              </Typography>
-              <Typography color="text.secondary">
-                Tendencias normalizadas de entrenamiento y recuperación.
-              </Typography>
+    <Stack spacing={3}>
+      <MultisourceLocalAnalytics endDate={endDate} />
+
+      <Card>
+        <CardContent>
+          <Stack spacing={3}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                gap: 2,
+                justifyContent: "space-between",
+                alignItems: { xs: "stretch", md: "center" },
+              }}
+            >
+              <Box>
+                <Typography variant="h5" fontWeight={800}>
+                  Analítica histórica
+                </Typography>
+                <Typography color="text.secondary">
+                  Tendencias normalizadas de entrenamiento y recuperación.
+                </Typography>
+              </Box>
+              <PeriodSelector value={period} onChange={setPeriod} disabled={loading} />
             </Box>
-            <PeriodSelector value={period} onChange={setPeriod} disabled={loading} />
-          </Box>
 
-          {loading && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <CircularProgress size={20} />
-              <Typography color="text.secondary">
-                Actualizando tendencias…
-              </Typography>
-            </Box>
-          )}
+            {loading && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <CircularProgress size={20} />
+                <Typography color="text.secondary">
+                  Actualizando tendencias…
+                </Typography>
+              </Box>
+            )}
 
-          {error && <Alert severity="error">{error}</Alert>}
+            {error && <Alert severity="error">{error}</Alert>}
 
-          {data?.partialErrors?.length > 0 && (
-            <Alert severity="warning">
-              Algunas fechas o métricas no estuvieron disponibles. Se muestran los datos que sí pudieron recuperarse.
-            </Alert>
-          )}
+            {data?.partialErrors?.length > 0 && (
+              <Alert severity="warning">
+                Algunas fechas o métricas no estuvieron disponibles. Se muestran los datos que sí pudieron recuperarse.
+              </Alert>
+            )}
 
-          {!loading && !error && data && !hasAnyData && (
-            <Alert severity="info">No hay datos para este periodo.</Alert>
-          )}
+            {!loading && !error && data && !hasAnyData && (
+              <Alert severity="info">No hay datos para este periodo.</Alert>
+            )}
 
-          {data && (
-            <Stack spacing={4}>
-              <TrainingTrends data={data.weeklyActivity} />
-              <RecoveryTrends data={data.recovery} />
-            </Stack>
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
+            {data && (
+              <Stack spacing={4}>
+                <TrainingTrends data={data.weeklyActivity} />
+                <RecoveryTrends data={data.recovery} />
+              </Stack>
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
   );
 }
