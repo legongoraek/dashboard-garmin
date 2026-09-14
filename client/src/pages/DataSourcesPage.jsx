@@ -18,6 +18,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CloudSyncIcon from "@mui/icons-material/CloudSync";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { useNavigate } from "react-router-dom";
+import LocalMultisourceInsights from "../components/analytics/LocalMultisourceInsights.jsx";
 import { parseGpxToCanonical } from "../providers/gpxProvider.js";
 import { parseFitToCanonical } from "../providers/fitProvider.js";
 import {
@@ -227,6 +228,8 @@ export default function DataSourcesPage() {
               </Stack>
             </CardContent>
           </Card>
+
+          <LocalMultisourceInsights />
 
           <Card>
             <CardContent>
