@@ -6,6 +6,7 @@ import {
   getStravaActivityStreams,
   getStravaAuthorizationUrl,
   getStravaReadiness,
+  revokeStravaToken,
 } from "./stravaService.js";
 
 const router = Router();
@@ -51,19 +52,28 @@ function officialGarminReadiness(env = process.env) {
 router.get("/providers", (req, res) => {
   const strava = getStravaReadiness();
   const garminOfficial = officialGarminReadiness();
+  const databaseUrlPresent = Boolean(process.env.DATABASE_URL);
   res.json({
     ok: true,
     providers: {
       garmin: { configured: true, mode: "legacy_personal" },
       strava: { ...strava, authorized: Boolean(parseCookieJson(req, STRAVA_TOKENS_COOKIE)?.access_token) },
       garmin_official: garminOfficial,
-      fit: { configured: true, mode: "file_import", sdkRequired: true },
+      fit: {
+        configured: false,
+        mode: "file_import",
+        blocker: "Install and lock @garmin/fitsdk in the client build to enable binary FIT decoding",
+      },
       gpx: { configured: true, mode: "file_import" },
       komoot: { configured: true, mode: "gpx_import" },
     },
     persistence: {
       browserIndexedDb: true,
-      postgresPostgisConfigured: Boolean(process.env.DATABASE_URL),
+      databaseUrlPresent,
+      postgresPostgisConfigured: false,
+      blocker: databaseUrlPresent
+        ? "PostgreSQL schema is ready, but a runtime pg adapter is not installed yet"
+        : "DATABASE_URL and a runtime pg adapter are required for server persistence",
     },
   });
 });
@@ -96,9 +106,23 @@ router.get("/strava/oauth/callback", async (req, res) => {
   }
 });
 
-router.post("/strava/disconnect", (req, res) => {
-  res.clearCookie(STRAVA_TOKENS_COOKIE, cookieOptions);
-  res.json({ ok: true });
+router.post("/strava/disconnect", async (req, res) => {
+  const tokens = parseCookieJson(req, STRAVA_TOKENS_COOKIE);
+  let revoked = false;
+  let warning = null;
+
+  try {
+    if (tokens?.access_token) {
+      const result = await revokeStravaToken(tokens.access_token);
+      revoked = result.revoked;
+    }
+  } catch (error) {
+    warning = error.message;
+  } finally {
+    res.clearCookie(STRAVA_TOKENS_COOKIE, cookieOptions);
+  }
+
+  res.json({ ok: true, revoked, warning });
 });
 
 router.get("/strava/activities", async (req, res) => {
