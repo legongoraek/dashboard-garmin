@@ -28,12 +28,13 @@ export default function ActivityExplorerPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError("");
 
     getActivityDetail(id)
       .then((response) => {
-        if (!cancelled) setDetail(normalizeGarminActivityDetail(id, response));
+        if (!cancelled) {
+          setDetail(normalizeGarminActivityDetail(id, response));
+          setError("");
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err?.message || "No se pudo cargar la actividad");
