@@ -41,6 +41,45 @@ export function activityFingerprint(activity) {
   return `${type}:${startBucket}:${durationBucket}:${distanceBucket}`;
 }
 
+function sameIdentity(left, right) {
+  if (left?.activityUid && right?.activityUid && left.activityUid === right.activityUid) return true;
+  return Boolean(
+    left?.source
+    && right?.source
+    && left.source === right.source
+    && left?.sourceActivityId
+    && right?.sourceActivityId
+    && String(left.sourceActivityId) === String(right.sourceActivityId)
+  );
+}
+
+function withinMetricTolerance(leftValue, rightValue, absoluteTolerance, relativeTolerance) {
+  const left = numeric(leftValue);
+  const right = numeric(rightValue);
+  if (left === null || right === null) return true;
+  const tolerance = Math.max(absoluteTolerance, Math.max(Math.abs(left), Math.abs(right)) * relativeTolerance);
+  return Math.abs(left - right) <= tolerance;
+}
+
+function activitiesMatch(left, right) {
+  if (sameIdentity(left, right)) return true;
+
+  if (left?.source && right?.source && left.source === right.source) return false;
+  if ((left?.activityTypeNorm ?? "other") !== (right?.activityTypeNorm ?? "other")) return false;
+
+  const leftDate = deduplicationDate(left);
+  const rightDate = deduplicationDate(right);
+  if (!leftDate || !rightDate) return false;
+  if (Math.abs(leftDate.getTime() - rightDate.getTime()) > 5 * 60 * 1000) return false;
+
+  if (!withinMetricTolerance(left?.durationS, right?.durationS, 120, 0.05)) return false;
+  if (!withinMetricTolerance(left?.distanceM, right?.distanceM, 250, 0.03)) return false;
+
+  const comparableDuration = numeric(left?.durationS) !== null && numeric(right?.durationS) !== null;
+  const comparableDistance = numeric(left?.distanceM) !== null && numeric(right?.distanceM) !== null;
+  return comparableDuration || comparableDistance;
+}
+
 function sourceEvidence(activity) {
   return {
     source: activity?.source ?? null,
@@ -89,18 +128,27 @@ function mergedLogicalActivity(group) {
 }
 
 export function deduplicateCanonicalActivities(activities = []) {
-  const groups = new Map();
-  for (const activity of activities) {
-    const fingerprint = activityFingerprint(activity);
-    const current = groups.get(fingerprint) ?? [];
-    current.push(activity);
-    groups.set(fingerprint, current);
+  const ordered = [...activities].sort((a, b) => {
+    const byTime = (deduplicationDate(a)?.getTime() ?? 0) - (deduplicationDate(b)?.getTime() ?? 0);
+    if (byTime !== 0) return byTime;
+    return String(a?.activityUid ?? "").localeCompare(String(b?.activityUid ?? ""));
+  });
+  const groups = [];
+
+  for (const activity of ordered) {
+    const matchingGroup = groups.find((group) => group.every((member) => activitiesMatch(activity, member)));
+    if (matchingGroup) matchingGroup.push(activity);
+    else groups.push([activity]);
   }
-  return [...groups.entries()].map(([fingerprint, group]) => ({
-    ...mergedLogicalActivity(group),
-    dedupFingerprint: fingerprint,
-    sources: group.map(sourceEvidence),
-  })).sort((a, b) => (activityDate(b)?.getTime() ?? 0) - (activityDate(a)?.getTime() ?? 0));
+
+  return groups.map((group) => {
+    const merged = mergedLogicalActivity(group);
+    return {
+      ...merged,
+      dedupFingerprint: activityFingerprint(merged),
+      sources: group.map(sourceEvidence),
+    };
+  }).sort((a, b) => (activityDate(b)?.getTime() ?? 0) - (activityDate(a)?.getTime() ?? 0));
 }
 
 function mondayForDate(date) {
