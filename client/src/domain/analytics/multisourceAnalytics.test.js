@@ -51,6 +51,21 @@ test("fingerprint prefers UTC when providers represent the same instant with dif
   assert.equal(activityFingerprint(garmin), activityFingerprint(strava));
 });
 
+test("dedup matches equivalent cross-provider activities across a rounded fingerprint boundary", () => {
+  const garmin = activity({
+    startedAtUtc: "2026-09-10T12:02:29Z",
+  });
+  const strava = activity({
+    activityUid: "strava:boundary",
+    source: "strava",
+    sourceActivityId: "boundary",
+    startedAtUtc: "2026-09-10T12:02:31Z",
+  });
+
+  assert.notEqual(activityFingerprint(garmin), activityFingerprint(strava));
+  assert.equal(deduplicateCanonicalActivities([garmin, strava]).length, 1);
+});
+
 test("dedup keeps one logical activity, preserves evidence, prefers the richest record, and fills its missing metrics from other sources", () => {
   const garmin = activity({
     avgHeartRateBpm: 152,
