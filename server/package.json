@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test",
     "dev": "node index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "migrate:analytics": "node scripts/migrateAnalytics.js"
   },
   "keywords": [],
   "author": "",
