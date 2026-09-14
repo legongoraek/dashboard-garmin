@@ -108,7 +108,15 @@ export function fitMessagesToCanonical(messages = {}, { fileName = "activity.fit
 }
 
 export async function parseFitToCanonical(arrayBuffer, options = {}) {
-  const { Decoder, Stream } = await import("@garmin/fitsdk");
+  const moduleName = "@garmin/fitsdk";
+  let sdk;
+  try {
+    sdk = await import(/* @vite-ignore */ moduleName);
+  } catch {
+    throw new Error("FIT import requires @garmin/fitsdk to be installed and bundled in the client build");
+  }
+
+  const { Decoder, Stream } = sdk;
   const stream = Stream.fromArrayBuffer(arrayBuffer);
   const decoder = new Decoder(stream);
   if (!decoder.isFIT()) throw new Error("El archivo no es un FIT válido");
