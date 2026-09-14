@@ -36,8 +36,12 @@ test("fingerprint groups equivalent activities across providers", () => {
   assert.equal(activityFingerprint(garmin), activityFingerprint(strava));
 });
 
-test("dedup keeps one logical activity, preserves evidence, and prefers the richest record", () => {
-  const garmin = activity({ avgHeartRateBpm: 152, avgPowerW: null });
+test("dedup keeps one logical activity, preserves evidence, prefers the richest record, and fills its missing metrics from other sources", () => {
+  const garmin = activity({
+    avgHeartRateBpm: 152,
+    avgPowerW: null,
+    caloriesKcal: 620,
+  });
   const strava = activity({
     activityUid: "strava:22",
     source: "strava",
@@ -47,11 +51,15 @@ test("dedup keeps one logical activity, preserves evidence, and prefers the rich
     distanceM: 10020,
     avgHeartRateBpm: 151,
     avgPowerW: 238,
+    caloriesKcal: null,
     deviceModel: "Edge",
   });
 
   const [logical] = deduplicateCanonicalActivities([garmin, strava]);
   assert.equal(logical.activityUid, "strava:22");
+  assert.equal(logical.avgPowerW, 238);
+  assert.equal(logical.caloriesKcal, 620);
+  assert.equal(logical.avgHeartRateBpm, 151);
   assert.equal(logical.sources.length, 2);
   assert.deepEqual(logical.sources.map((row) => row.source).sort(), ["garmin", "strava"]);
 });
