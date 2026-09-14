@@ -8,6 +8,7 @@ import {
   revokeStravaToken,
 } from "./stravaService.js";
 import { buildProviderReadiness } from "./providerReadiness.js";
+import { getPostgresHealth } from "./postgresHealth.js";
 
 const router = Router();
 const isProd = process.env.NODE_ENV !== "development";
@@ -44,6 +45,11 @@ router.get("/providers", (req, res) => {
     parseCookieJson(req, STRAVA_TOKENS_COOKIE)?.access_token
   );
   res.json(buildProviderReadiness(process.env, { stravaAuthorized }));
+});
+
+router.get("/providers/postgres/health", async (_req, res) => {
+  const health = await getPostgresHealth();
+  res.status(health.ok ? 200 : health.configured ? 503 : 501).json(health);
 });
 
 router.get("/strava/oauth/start", (req, res) => {
