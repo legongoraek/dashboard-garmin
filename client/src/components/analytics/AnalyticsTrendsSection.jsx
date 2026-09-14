@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import MultisourceLocalAnalytics from "./MultisourceLocalAnalytics";
+import LocalMultisourceInsights from "./LocalMultisourceInsights.jsx";
 import PeriodSelector from "./PeriodSelector";
 import RecoveryTrends from "./RecoveryTrends";
 import TrainingTrends from "./TrainingTrends";
@@ -54,7 +54,7 @@ export default function AnalyticsTrendsSection({ endDate }) {
 
   return (
     <Stack spacing={3}>
-      <MultisourceLocalAnalytics endDate={endDate} />
+      <LocalMultisourceInsights endDate={endDate} />
 
       <Card>
         <CardContent>
