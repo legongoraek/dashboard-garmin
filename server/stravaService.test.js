@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildStravaAuthorizationUrl, getStravaReadiness } from "./stravaService.js";
+import {
+  buildStravaAuthorizationUrl,
+  getStravaReadiness,
+  revokeStravaToken,
+} from "./stravaService.js";
 
 test("reports missing Strava configuration without secrets", () => {
   const readiness = getStravaReadiness({});
@@ -18,4 +22,25 @@ test("builds authorization URL with state and activity scopes", () => {
   assert.equal(url.searchParams.get("client_id"), "123");
   assert.equal(url.searchParams.get("state"), "abc");
   assert.match(url.searchParams.get("scope"), /activity:read/);
+});
+
+test("revokes Strava access token using Basic client authentication", async () => {
+  let request;
+  const result = await revokeStravaToken(
+    "access-token",
+    {
+      STRAVA_CLIENT_ID: "123",
+      STRAVA_CLIENT_SECRET: "secret",
+      STRAVA_REDIRECT_URI: "https://example.com/callback",
+    },
+    async (url, options) => {
+      request = { url, options };
+      return { ok: true, status: 200, async json() { return {}; } };
+    }
+  );
+
+  assert.equal(request.url, "https://www.strava.com/oauth/revoke");
+  assert.match(request.options.headers.Authorization, /^Basic /);
+  assert.equal(new URLSearchParams(request.options.body).get("token"), "access-token");
+  assert.equal(result.revoked, true);
 });
