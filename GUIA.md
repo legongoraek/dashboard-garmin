@@ -5,8 +5,9 @@ Tres cosas distintas, cada una en su sección:
 1. [Activar lo que hoy está bloqueado](#1-activar-lo-que-hoy-está-bloqueado) — Strava, Garmin Developer Program, PostgreSQL/PostGIS.
 2. [Usar el dashboard ya desplegado](#2-usar-el-dashboard-ya-desplegado) — cómo entrar y qué hace cada pantalla.
 3. [Desplegar desde cero](#3-desplegar-desde-cero) — clonar el repo y levantarlo en local o en un hosting nuevo.
+4. [Renovar el login de Garmin cuando Render se bloquea](#4-renovar-el-login-de-garmin-cuando-render-se-bloquea) — receta de ~5 minutos, sin código nuevo.
 
-Los bloqueos activos están registrados con evidencia en [PENDIENTES.md](PENDIENTES.md) (P-001, P-002, P-003, P-005). Esta guía es el "cómo" de esos puntos.
+Los bloqueos activos están registrados con evidencia en [PENDIENTES.md](PENDIENTES.md) (P-001, P-002, P-003, P-005, P-006). Esta guía es el "cómo" de esos puntos.
 
 ---
 
@@ -144,3 +145,33 @@ npm run verify:install   # desde la raíz del repo
 ```bash
 npm run smoke -- --base-url=https://<tu-backend-en-render>
 ```
+
+---
+
+## 4. Renovar el login de Garmin cuando Render se bloquea
+
+Contexto ([P-006](PENDIENTES.md)): Garmin bloquea el login completo (con MFA) cuando viene de una IP de datacenter como la de Render. Esto **solo pasa en el login inicial** — una vez logueado, la sesión se renueva sola sin MFA por ~1 año (`ai-skill-garmin/skills/garmin-connect/scripts/garmin.ts:29-31`), así que en el día a día producción funciona normal. Esta receta solo hace falta cuando ese año se cumple y el login vuelve a fallar en producción con `429`/`OAuth1 exchange failed`.
+
+No hay forma de evitar que ese primer login corra desde tu máquina — es la IP la que Garmin bloquea, no el código, y ninguna solución gratis/sin cambiar de hosting lo evita. Lo que sí es simple es pasar la sesión ya lograda a producción, sin nada que instalar ni mantener:
+
+1. En tu máquina, levanta el proyecto en local (ver [sección 3.3](#33-correr-en-local)):
+   ```bash
+   cd server && npm run dev    # puerto 4000
+   cd client && npm run dev    # puerto 5173, en otra terminal
+   ```
+2. Entra a `http://localhost:5173/login` y haz login con tu cuenta Garmin (con MFA si te lo pide). Como corre desde tu IP, no desde Render, no se bloquea.
+3. Con la pestaña de `localhost:5173` abierta, abre DevTools → pestaña **Application** (Chrome/Edge) o **Storage** (Firefox) → **Cookies** → `http://localhost:5173`. Busca la cookie `garmin_tokens` y copia su **Value** completo (es un JSON largo).
+4. Abre el dashboard real: `https://dashboard-garmin-azure.vercel.app/`. DevTools → Application → Cookies → `https://dashboard-garmin.onrender.com`. Click derecho → **Add** (o el botón `+`) y crea una cookie:
+   - **Name**: `garmin_tokens`
+   - **Value**: pega lo que copiaste en el paso 3
+   - **Domain**: `dashboard-garmin.onrender.com`
+   - **Path**: `/`
+   - **Secure**: ✓
+   - **SameSite**: `None`
+5. En la misma pestaña de producción, abre la consola de DevTools y corre:
+   ```js
+   localStorage.setItem("garmin_session", "true")
+   ```
+6. Recarga `https://dashboard-garmin-azure.vercel.app/dashboard`. Debería cargar tus datos sin pedir login.
+
+Si en el futuro esto se vuelve más frecuente que una vez al año (por ejemplo, si el refresco automático también empieza a fallar desde Render), avisa para reconsiderar — ahí sí valdría la pena algo más automatizado.
