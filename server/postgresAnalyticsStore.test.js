@@ -35,7 +35,7 @@ test("track point insert uses PostGIS point with longitude then latitude", () =>
   assert.equal(values[3], -89.62);
 });
 
-test("saves one canonical bundle inside a transaction", async () => {
+test("saves one canonical bundle inside a transaction and replaces sample/track children", async () => {
   const calls = [];
   const client = {
     async query(text, values) {
@@ -63,6 +63,8 @@ test("saves one canonical bundle inside a transaction", async () => {
   assert.equal(calls.at(-2).text, "COMMIT");
   assert.equal(calls.at(-1).text, "RELEASE");
   assert.ok(calls.some((call) => /insert into activity_sources/i.test(call.text)));
+  assert.ok(calls.some((call) => /delete from activity_samples/i.test(call.text)));
+  assert.ok(calls.some((call) => /delete from activity_track_points/i.test(call.text)));
   assert.ok(calls.some((call) => /insert into activity_samples/i.test(call.text)));
   assert.ok(calls.some((call) => /insert into activity_track_points/i.test(call.text)));
 });
