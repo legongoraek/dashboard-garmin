@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
+import ActivityExplorerPage from "./pages/ActivityExplorerPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -33,7 +34,7 @@ export default function App() {
   const [hasSession, setHasSession] = useState(() => hasStoredSession(localStorage));
 
   useEffect(() => {
-    if (location.pathname === "/login" || location.pathname === "/dashboard") {
+    if (location.pathname === "/login" || location.pathname === "/dashboard" || location.pathname.startsWith("/activities/")) {
       wakeUpBackend().catch((error) => {
         console.warn("No se pudo despertar el backend:", error);
       });
@@ -72,6 +73,16 @@ export default function App() {
           element={
             hasSession ? (
               <DashboardPage onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/activities/:id"
+          element={
+            hasSession ? (
+              <ActivityExplorerPage />
             ) : (
               <Navigate to="/login" replace />
             )
