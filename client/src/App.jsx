@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 
 import ActivityExplorerPage from "./pages/ActivityExplorerPage";
 import DashboardPage from "./pages/DashboardPage";
+import DataSourcesPage from "./pages/DataSourcesPage";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import { wakeUpBackend } from "./services/garminApi";
@@ -34,7 +35,12 @@ export default function App() {
   const [hasSession, setHasSession] = useState(() => hasStoredSession(localStorage));
 
   useEffect(() => {
-    if (location.pathname === "/login" || location.pathname === "/dashboard" || location.pathname.startsWith("/activities/")) {
+    if (
+      location.pathname === "/login" ||
+      location.pathname === "/dashboard" ||
+      location.pathname === "/sources" ||
+      location.pathname.startsWith("/activities/")
+    ) {
       wakeUpBackend().catch((error) => {
         console.warn("No se pudo despertar el backend:", error);
       });
@@ -53,6 +59,9 @@ export default function App() {
     navigate("/login", { replace: true });
   };
 
+  const requireSession = (element) =>
+    hasSession ? element : <Navigate to="/login" replace />;
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -68,26 +77,9 @@ export default function App() {
             )
           }
         />
-        <Route
-          path="/dashboard"
-          element={
-            hasSession ? (
-              <DashboardPage onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/activities/:id"
-          element={
-            hasSession ? (
-              <ActivityExplorerPage />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+        <Route path="/dashboard" element={requireSession(<DashboardPage onLogout={handleLogout} />)} />
+        <Route path="/activities/:id" element={requireSession(<ActivityExplorerPage />)} />
+        <Route path="/sources" element={requireSession(<DataSourcesPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ThemeProvider>
