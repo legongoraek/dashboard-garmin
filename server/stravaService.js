@@ -1,5 +1,6 @@
 const AUTH_URL = "https://www.strava.com/oauth/authorize";
 const TOKEN_URL = "https://www.strava.com/oauth/token";
+const REVOKE_URL = "https://www.strava.com/oauth/revoke";
 const API_BASE = "https://api-v3.strava.com";
 
 export function getStravaReadiness(env = process.env) {
@@ -56,6 +57,23 @@ export async function refreshStravaToken(refreshToken, env = process.env, fetchF
   });
   if (!response.ok) throw new Error(`Strava token refresh failed: ${response.status}`);
   return response.json();
+}
+
+export async function revokeStravaToken(accessToken, env = process.env, fetchFn = fetch) {
+  if (!accessToken) return { revoked: false };
+  const current = config(env);
+  const credentials = Buffer.from(`${current.clientId}:${current.clientSecret}`).toString("base64");
+  const body = new URLSearchParams({ token: accessToken, token_type_hint: "access_token" });
+  const response = await fetchFn(REVOKE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+  if (!response.ok) throw new Error(`Strava token revoke failed: ${response.status}`);
+  return { revoked: true };
 }
 
 export async function ensureStravaAccessToken(tokens, env = process.env, fetchFn = fetch) {
