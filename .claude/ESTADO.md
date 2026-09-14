@@ -6,6 +6,7 @@ _Ultima actualizacion: 2026-09-14_
 - GitHub se usa para versionado; GitHub Actions/CI/CD no es requisito ni fuente de verdad para validar el proyecto.
 - La validacion oficial debe ejecutarse localmente desde el repositorio con los scripts raiz.
 - Arquitectura provider-agnostic basada en modelo canonical.
+- Fases 1-10: codigo implementable sin credenciales/infraestructura externa cubierto. Lo pendiente se limita a activaciones externas y smoke tests contra servicios reales.
 
 ## Fases 1-7
 
@@ -35,6 +36,8 @@ _Ultima actualizacion: 2026-09-14_
 - Garmin official boundary canonical preparado sin inventar auth/endpoints antes de aprobacion.
 
 ## Fase 8 - multisource analytics avanzado
+Estado de codigo: completado para el alcance actual.
+
 - Deduplicacion multisource conserva todas las evidencias de fuente.
 - Primary record elegido por riqueza de datos y prioridad de provider solo como desempate.
 - Campos faltantes se completan de forma conservadora sin reemplazar valores existentes.
@@ -50,10 +53,10 @@ _Ultima actualizacion: 2026-09-14_
   - duracion: tolerancia max(120 s, 5%);
   - distancia: tolerancia max(250 m, 3%);
   - requiere al menos duracion o distancia comparable.
-- Esto elimina el falso negativo de actividades separadas por segundos pero ubicadas en lados opuestos del limite de un bucket redondeado.
+- El matcher evita el falso negativo de actividades equivalentes ubicadas a lados distintos del limite de un bucket redondeado.
 
 ## Fase 9 - validacion autonoma local
-Implementada en codigo sin dependencia de CI/CD.
+Estado de codigo: completado.
 
 Comandos raiz:
 
@@ -61,49 +64,82 @@ Comandos raiz:
 npm run verify:install
 npm run verify
 npm run verify:quick
+npm run verify:runtime
+npm run smoke
 ```
 
 `verify:install`:
 1. `npm ci` client
 2. `npm ci` server
-3. client tests
-4. client lint
-5. client build
-6. server tests
+3. root tests
+4. client tests
+5. client lint
+6. client build
+7. server tests
+8. backend runtime smoke autocontenido
 
-`verify` ejecuta tests/lint/build sin reinstalar.
-`verify:quick` ejecuta client tests + server tests.
+`verify` ejecuta los pasos 3-8 sin reinstalar dependencias.
+`verify:quick` ejecuta root tests + client tests + server tests.
 
 Implementacion:
 - `package.json` raiz sin dependencias externas.
 - `scripts/verificationPlan.mjs`
 - `scripts/verificationPlan.test.mjs`
 - `scripts/verify.mjs`
+- el gate prueba tambien sus propios scripts raiz.
 - compatible con Windows (`npm.cmd`) y Linux/macOS (`npm`).
 - fail-fast y exit code != 0 ante cualquier paso fallido.
+- GitHub Actions puede existir como redundancia, pero no participa en la definicion de codigo valido.
 
-## Fase 10 - codigo implementable sin credenciales externas
-- `/api/health` ya existe para liveness del backend.
-- `/api/providers` ya existe para readiness de providers.
-- `/api/providers/postgres/health` ya existe para Postgres/PostGIS bajo demanda.
-- Smoke checks autonomos agregados:
-  - `scripts/smoke.mjs`
-  - `scripts/smoke.test.mjs`
-  - `npm run smoke`
-  - valida `/api/health` y `/api/providers`.
-  - soporta `--base-url=` y `API_BASE_URL`.
-  - timeout de 10 s por endpoint y exit code != 0 si falla alguno.
-- Backup canonical local y controles de privacidad/portabilidad ya existen.
-- Deploy actual puede seguir usando Vercel/Render, pero no participa en la definicion de codigo valido.
+## Fase 10 - produccion y operabilidad
+Estado de codigo: completado para todo lo que no requiere servicios externos.
+
+### Health/readiness
+- `/api/health` para liveness del backend.
+- `/api/providers` para readiness de providers.
+- `/api/providers/postgres/health` para PostgreSQL/PostGIS bajo demanda.
+
+### Smoke checks
+- `scripts/smoke.mjs`
+- `scripts/smoke.test.mjs`
+- `npm run smoke` valida una instancia ya levantada/desplegada.
+- soporta `--base-url=` y `API_BASE_URL`.
+- timeout de 10 s por endpoint y exit code != 0 ante fallo.
+
+### Runtime verification autocontenida
+- `scripts/runtimeVerify.mjs`
+- `npm run verify:runtime`
+- `server/index.js` exporta `app` y `startServer()` sin arrancar automaticamente cuando se importa como modulo.
+- runtime verification inicia Express en puerto efimero (`0`), resuelve el puerto real, comprueba `/api/health` + `/api/providers` y cierra el servidor en `finally`.
+- no requiere Strava, Garmin Developer ni PostgreSQL/PostGIS para la comprobacion base.
+
+### Lifecycle de produccion
+- `server/runtimeLifecycle.js`
+- `server/runtimeLifecycle.test.js`
+- shutdown idempotente ante `SIGTERM`/`SIGINT`.
+- cierre correcto => exit code 0.
+- fallo al cerrar => exit code 1 con error controlado.
+- el lifecycle se adjunta solo cuando `server/index.js` es ejecutado directamente, no al importarlo para tests/runtime smoke.
+
+### Portabilidad/privacidad
+- Backup canonical local, restauracion y borrado ya implementados.
+- Exact GPS, biometria y recovery permanecen dentro del area privada.
+- Deploy Vercel/Render es una capa de ejecucion; no es el gate tecnico del codigo.
 
 ## Verificacion realizada en esta sesion
-- TDD RED reproducido localmente para el defecto de dedup en limite de bucket: el algoritmo anterior devolvia 2 actividades logicas para registros equivalentes separados por 2 s.
-- Tests aislados de los nuevos modulos de validacion/smoke ejecutados localmente con Node 22:
-  - 7 tests
-  - 7 pass
+- TDD RED reproducido para el defecto de dedup en limite de bucket: el algoritmo anterior devolvia 2 actividades logicas para registros equivalentes separados por segundos.
+- TDD RED reproducido para el gate local: la secuencia anterior omitía `root:test`.
+- TDD RED reproducido para runtime: no existia resolucion de URL/puerto efimero.
+- TDD RED reproducido para lifecycle: no existia `createShutdownHandler`.
+- Verificacion local aislada con Node 22 de los modulos nuevos/actualizados, sin depender de GitHub Actions:
+  - verification plan
+  - smoke/runtime helpers
+  - lifecycle
+  - 13 tests ejecutados
+  - 13 pass
   - 0 fail
-- No se declara una verificacion completa del repositorio en este entorno porque no tiene acceso de red para clonar GitHub ni instalar/reconstruir todo el workspace.
-- La fuente de verdad completa queda en `npm run verify:install` ejecutado sobre un checkout local real.
+- No se declara una verificacion completa del workspace en este entorno porque no dispone de un checkout completo con todas las dependencias instaladas.
+- La evidencia completa debe obtenerse en un checkout local real mediante `npm run verify:install`; despues, `npm run verify` es el gate diario.
 
 ## Blockers externos reales
 1. Strava live requiere `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` y autorizacion OAuth.
