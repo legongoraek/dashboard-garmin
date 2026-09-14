@@ -2,6 +2,7 @@ import { execFile } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import { writeTokens, readTokens } from "./garminConfigStore.js";
+import { buildTrainingStatusArgs } from "./garminCommands.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,13 +54,6 @@ async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
         const cleanStdout = stdout?.trim();
         const cleanStderr = stderr?.trim();
 
-        // These checks only make sense on a failed run (non-zero exit) — the
-        // script's own MFA/rate-limit signals are only ever printed to
-        // stderr on that path (see garmin.ts's main().catch()). Checking
-        // fullOutput unconditionally (including a *successful* run's stdout
-        // data) caused real fitness data containing "429" as a coincidental
-        // substring — a timestamp, a distance, a heart rate — to be
-        // misdetected as a Garmin rate-limit on an otherwise-successful call.
         if (error) {
           const errorOutput = [cleanStderr, cleanStdout].filter(Boolean).join("\n");
 
@@ -192,7 +186,7 @@ export async function getTrainingReadiness(date, incomingTokens) {
 }
 
 export async function getTrainingStatus(date, incomingTokens) {
-  return runGarminCommand(["training-status", date, "--pretty"], {}, incomingTokens);
+  return runGarminCommand(buildTrainingStatusArgs(date), {}, incomingTokens);
 }
 
 export async function getActivityDetail(activityId, incomingTokens) {
