@@ -7,6 +7,7 @@ _Ultima actualizacion: 2026-09-14_
 - Plan Phases 1-3: `docs/superpowers/plans/2026-09-13-canonical-analytics-trends.md`.
 - Plan Phases 4-7: `docs/superpowers/plans/2026-09-14-complete-multisource-platform.md`.
 - Phases 1-3 fueron integradas a `main` mediante PR #1, merge commit `20a8d6ce91f32af8cb0fbf8bef22008717e2df1a`.
+- Phases 4-7 y extensiones multisource posteriores se implementaron directamente en `main`.
 
 ## Implementado
 
@@ -24,20 +25,35 @@ _Ultima actualizacion: 2026-09-14_
 - Actividades recientes enlazan al explorer.
 - Actividades canonical locales/importadas usan `/imported/:id` con el mismo modelo de visualizacion.
 
-### Persistence foundation (Phase 5)
+### Persistence + multisource archive (Phase 5)
 - IndexedDB local como persistencia canonical cero-infra (`dashboard-garmin-analytics`).
 - CRUD local para canonical activity detail.
-- Migration `server/migrations/001_analytics_postgis.sql` con PostGIS y entidades:
+- El loader historico Garmin archiva automaticamente activity summaries canonical en IndexedDB sin romper analytics si el archive local falla.
+- Strava, GPX, Komoot y FIT usan el mismo repositorio canonical local.
+- Deduplicacion multisource implementada mediante fingerprint de tipo + ventana temporal + duracion + distancia.
+- Una actividad logica conserva evidencia de todos sus source records; no se descartan las fuentes duplicadas.
+- Prioridad de evidencia para actividad logica: Garmin official, Garmin legacy, FIT, Strava, Komoot, GPX.
+- Analitica multisource local muestra registros fuente, actividades logicas, duplicados vinculados y conteo por provider.
+- Year-over-year semanal funciona sobre historia canonical persistida sin generar cientos de llamadas HRV/readiness a Garmin.
+
+### PostgreSQL + PostGIS runtime
+- Migration `server/migrations/001_analytics_postgis.sql` incluye:
   - activities
   - activity_sources
   - activity_samples
-  - activity_track_points
+  - activity_track_points (geography Point 4326 + GIST)
   - daily_health
   - sleep
   - recovery_metrics
   - raw_objects
   - consents
-- Persistencia PostgreSQL server-side NO se marca como activa: falta provisionar DB + instalar runtime adapter `pg`. `DATABASE_URL` solo indica disponibilidad de configuracion, no funcionalidad completa.
+- Runtime `pg@8.23.0` instalado y lockeado en server.
+- `server/postgresRuntime.js` crea Pool lazy solo cuando existe `DATABASE_URL`, con SSL configurable y limites de pool.
+- `server/postgresAnalyticsStore.js` persiste activity/source/samples/track points dentro de transaccion y reemplaza children obsoletos en reingesta.
+- Los puntos PostGIS usan longitud/latitud en `ST_MakePoint` correctamente.
+- `npm run migrate:analytics` aplica la migracion PostGIS de forma transaccional y verifica `postgis_lib_version()` al terminar.
+- `/api/providers/postgres/health` verifica conexion/PostGIS bajo demanda y no expone errores internos/credenciales.
+- IndexedDB sigue siendo el default; Postgres se activa al configurar/provisionar `DATABASE_URL` y ejecutar la migracion.
 
 ### Providers adicionales (Phase 6)
 - Registry de providers/capabilities: Garmin legacy, Garmin official, Strava, FIT, GPX y Komoot.
@@ -51,10 +67,11 @@ _Ultima actualizacion: 2026-09-14_
   - sync secuencial de hasta 20 actividades hacia canonical/IndexedDB.
   - desconexion local + intento de revocacion del token remoto.
 - FIT:
-  - mapping puro de mensajes FIT decodificados a canonical esta implementado.
-  - adapter de archivo preparado para `@garmin/fitsdk`.
-  - decoding binario NO esta activo en el build actual porque `@garmin/fitsdk` aun no esta instalado/lockeado; la UI/readiness lo reporta como blocker en lugar de fingir soporte completo.
-- Pantalla protegida `/sources` para readiness, Strava, GPX/Komoot/FIT e importaciones locales.
+  - `@garmin/fitsdk@21.214.0` instalado y lockeado en client.
+  - decoding binario activo via `Stream.fromArrayBuffer` + `Decoder`.
+  - verificacion de formato/integridad antes de normalizar.
+  - session/records se convierten a canonical activity/samples/track points manteniendo provenance FIT.
+- Pantalla protegida `/sources` reporta readiness real, importa GPX/Komoot/FIT, sincroniza Strava, muestra analytics multisource/YoY y permite verificar PostGIS cuando esta configurado.
 
 ### Official Garmin provider (Phase 7)
 - Boundary `garmin_official` creado sobre FIT Activity API output hacia el mismo canonical model.
@@ -63,31 +80,38 @@ _Ultima actualizacion: 2026-09-14_
 - No se inventaron endpoints/auth privados antes de aprobacion.
 
 ### Fixes incluidos
-- Falso `429/rate limited` del Garmin runner ya estaba arreglado y commiteado en `8240b72b1e9a08fe8b3bdb7724e2cca0c8b6d7a7`.
-- `/api/training-status` ahora usa el subcomando CLI real `training` mediante `server/garminCommands.js`.
-- Strava usa el nuevo host 2026 sin duplicar `/api/v3` en el path.
+- Falso `429/rate limited` del Garmin runner arreglado en `8240b72b1e9a08fe8b3bdb7724e2cca0c8b6d7a7`.
+- `/api/training-status` usa el subcomando CLI real `training` mediante `server/garminCommands.js`.
+- Strava usa el host 2026 sin duplicar `/api/v3` en el path.
+- Los efectos React 19 nuevos cumplen `react-hooks/set-state-in-effect`; no se desactivo ESLint.
+- Reingesta Postgres elimina samples/track points antiguos antes de insertar el nuevo detalle para evitar datos stale.
 
 ## Configuracion externa pendiente / blockers reales
-1. Strava live requiere `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` y autorizacion OAuth del usuario.
-2. Garmin oficial requiere aprobacion del Developer Program y credenciales emitidas por Garmin.
-3. PostgreSQL/PostGIS live requiere DB provisionada + `DATABASE_URL` + runtime adapter `pg` (no instalado aun).
-4. FIT binary import requiere instalar `@garmin/fitsdk` y actualizar `client/package-lock.json`; mapping/normalizacion ya existe.
-5. Year-over-year no se expone aun contra Garmin legacy: el loader actual haria cientos de requests diarios HRV/readiness y eleva innecesariamente el riesgo de rate-limit. Debe apoyarse en historia persistida o providers mas eficientes.
-6. Login Garmin puede seguir bloqueado desde IP de Render por reputacion/rate-limit real del datacenter.
+1. Strava live requiere `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` y autorizacion OAuth del usuario. Todo el flujo de codigo ya existe.
+2. Garmin oficial requiere aprobacion del Developer Program y credenciales emitidas por Garmin. El boundary canonical ya existe.
+3. PostgreSQL/PostGIS live requiere provisionar una DB, definir `DATABASE_URL` y ejecutar `npm run migrate:analytics`. El runtime `pg`, store, schema, migracion y health check ya existen.
+4. Login Garmin legacy puede seguir bloqueado desde IP de Render por reputacion/rate-limit real del datacenter.
+5. Smoke tests live de Strava/Garmin official/Postgres requieren sus respectivas credenciales/servicios; no se deben inventar ni almacenar credenciales del usuario.
 
 ## Verificacion
 - `.github/workflows/ci.yml` valida en cada push/PR a main:
   - client: `npm ci`, `npm test`, `npm run lint`, `npm run build`
   - server: `npm ci`, `npm test`
-- CI run #4 (`8583e5b7dd2c2b3bad9aad9e198354e5bab2764e`) termino `success`: client tests + lint + build y server tests pasaron.
-- La primera corrida encontro dos violaciones React 19 `set-state-in-effect`; fueron corregidas sin desactivar reglas y la corrida #4 confirmo el fix.
-- Vercel sigue limitado por build-rate-limit del plan; GitHub Actions es el gate tecnico confiable mientras dure ese limite.
+- La CI detecto y obligo a corregir errores React 19 antes de permitir build verde.
+- Multisource dedup + YoY quedo verde en CI run #15 (`9a1e43c615e20160ce06bfcb2e16a31a26656349`).
+- FIT SDK se instalo mediante lockfile generado por npm; una corrida temporal verifico `npm ci` antes del commit.
+- PostgreSQL runtime `pg` se instalo mediante lockfile generado por npm; una corrida temporal verifico `npm ci` antes del commit.
+- CI run #39 (`d209c236a3808a5e2538aca7961ae898e0e9b972`) termino success con client tests/lint/build y server tests.
+- La CI del estado final posterior a UI/readiness/Postgres health debe permanecer verde antes de declarar cierre tecnico.
+- Vercel puede seguir mostrando failure por build-rate-limit del plan; GitHub Actions es el gate tecnico confiable mientras dure ese limite.
 
 ## Decisiones fijas
 - UI/analytics nuevos consumen canonical, nunca payloads provider-specific.
 - Missing permanece `null`; no se convierte en cero.
 - Requests repetitivas a Garmin y sync Strava se mantienen secuenciales para controlar race/rate-limit.
-- IndexedDB es default mientras no haya razon operativa para infraestructura server-side.
-- Exact GPS y biometria se consideran datos sensibles y nunca se exponen en landing publica.
+- IndexedDB es default mientras no exista una DB Postgres/PostGIS configurada y migrada.
+- YoY usa historia persistida; no se implementa mediante cientos de requests diarios al Garmin legacy.
+- Exact GPS, biometria y recovery se consideran datos sensibles y nunca se exponen en landing publica.
+- Provider tokens permanecen server-side/HttpOnly cuando aplica.
 - Nunca automatizar ni almacenar credenciales Garmin reales del usuario.
 - Nunca usar NTFS junctions para exponer repos git separados dentro de worktrees.
