@@ -6,7 +6,8 @@
     "test": "node --test scripts/*.test.mjs",
     "verify": "node scripts/verify.mjs",
     "verify:quick": "node scripts/verify.mjs --quick",
-    "verify:install": "node scripts/verify.mjs --install"
+    "verify:install": "node scripts/verify.mjs --install",
+    "smoke": "node scripts/smoke.mjs"
   },
   "engines": {
     "node": ">=22"
