@@ -29,12 +29,15 @@ _Ultima actualizacion: 2026-09-14_
 - IndexedDB local como persistencia canonical cero-infra (`dashboard-garmin-analytics`).
 - CRUD local para canonical activity detail.
 - El loader historico Garmin archiva automaticamente activity summaries canonical en IndexedDB sin romper analytics si el archive local falla.
+- Re-archivar un summary Garmin ya no destruye un activity-detail enriquecido: conserva `samples`, `trackPoints` y `raw`, y actualiza/combina metadata canonical.
 - Strava, GPX, Komoot y FIT usan el mismo repositorio canonical local.
-- Deduplicacion multisource implementada mediante fingerprint de tipo + ventana temporal + duracion + distancia.
+- Deduplicacion multisource implementada mediante fingerprint de tipo + ventana temporal de 5 minutos + duracion + distancia.
 - Una actividad logica conserva evidencia de todos sus source records; no se descartan las fuentes duplicadas.
-- Prioridad de evidencia para actividad logica: Garmin official, Garmin legacy, FIT, Strava, Komoot, GPX.
+- La actividad primaria se elige primero por riqueza de datos y usa prioridad de provider solo como desempate (`garmin_official`, FIT, Garmin legacy, Strava, Komoot, GPX).
+- Campos faltantes (`null`/`undefined`) del registro primario se completan de forma conservadora con metricas disponibles en otras fuentes del mismo grupo, sin reemplazar valores existentes del primario.
+- `sourceQualityFlags` se unen sin duplicados entre evidencias.
 - Analitica multisource local muestra registros fuente, actividades logicas, duplicados vinculados y conteo por provider.
-- Year-over-year semanal funciona sobre historia canonical persistida sin generar cientos de llamadas HRV/readiness a Garmin.
+- Year-over-year semanal y resumen YTD vs la misma ventana del año anterior funcionan sobre historia canonical persistida sin generar cientos de llamadas HRV/readiness a Garmin.
 
 ### Privacidad y portabilidad local
 - Backup canonical JSON versionado para datos de IndexedDB.
@@ -93,6 +96,8 @@ _Ultima actualizacion: 2026-09-14_
 - Strava usa el host 2026 sin duplicar `/api/v3` en el path.
 - Los efectos React 19 nuevos cumplen `react-hooks/set-state-in-effect`; no se desactivo ESLint.
 - Reingesta Postgres elimina samples/track points antiguos antes de insertar el nuevo detalle para evitar datos stale.
+- El test runner del cliente usa ahora `node --test` para descubrimiento recursivo real; se elimino el glob `src/**/*.test.js` que podia omitir tests anidados en Bash.
+- Se eliminaron implementaciones duplicadas temporales de dedup/YoY y se consolido una sola fuente de verdad en `multisourceAnalytics.js` + `LocalMultisourceInsights`.
 
 ## Configuracion externa pendiente / blockers reales
 1. Strava live requiere `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` y autorizacion OAuth del usuario. Todo el flujo de codigo ya existe.
@@ -105,13 +110,13 @@ _Ultima actualizacion: 2026-09-14_
 - `.github/workflows/ci.yml` valida en cada push/PR a main:
   - client: `npm ci`, `npm test`, `npm run lint`, `npm run build`
   - server: `npm ci`, `npm test`
+- `client/package.json` usa `node --test`, por lo que la suite descubre tambien tests profundamente anidados.
 - La CI detecto y obligo a corregir errores React 19 antes de permitir build verde.
-- Multisource dedup + YoY quedo verde en CI run #15 (`9a1e43c615e20160ce06bfcb2e16a31a26656349`).
-- FIT SDK se instalo mediante lockfile generado por npm; una corrida temporal verifico `npm ci` antes del commit.
-- PostgreSQL runtime `pg` se instalo mediante lockfile generado por npm; una corrida temporal verifico `npm ci` antes del commit.
-- CI run #40 (`375c47b2952f33580b9a2b151aa2a6cf7ccfdb78`) termino success con client tests/lint/build y server tests para FIT + Postgres health UI.
-- CI run #46 (`9f35a4dca30fc33822d671ac9e7a53a001e833b9`) termino success con client tests/lint/build y server tests para privacidad/portabilidad local.
-- CI run #47 (`db4a6ba63df7d9b60bdecdff41e2e69e470537dc`) termino success: client `npm ci`, tests (incluyendo import real del FIT SDK), lint y build; server `npm ci` y tests.
+- FIT SDK se instalo mediante lockfile generado por npm; CI carga realmente el SDK.
+- PostgreSQL runtime `pg` se instalo y queda cubierto por tests de servidor.
+- CI run #69 (`4a9df6e497b9be95f3bfeb335965f057a4b33155`) termino success despues de consolidar dedup/YoY y eliminar duplicados.
+- TDD archive enrichment: run #70 fallo con la prueba que demostraba perdida potencial de detail; fix `7a9919d89d90ebcc6c2503750a941ebdb80aac0f` quedo success en run #71.
+- TDD complementary metrics: run #72 fallo con la nueva expectativa; fix `b76eddc1c1c59d7ca4c3736e1e290ef359691042` quedo success en run #73 con client tests/lint/build y server tests.
 - Vercel puede seguir mostrando failure por build-rate-limit del plan; GitHub Actions es el gate tecnico confiable mientras dure ese limite.
 
 ## Decisiones fijas
@@ -120,6 +125,7 @@ _Ultima actualizacion: 2026-09-14_
 - Requests repetitivas a Garmin y sync Strava se mantienen secuenciales para controlar race/rate-limit.
 - IndexedDB es default mientras no exista una DB Postgres/PostGIS configurada y migrada.
 - YoY usa historia persistida; no se implementa mediante cientos de requests diarios al Garmin legacy.
+- Dedup mantiene todas las evidencias de fuente; un logical activity puede combinar campos faltantes sin borrar provenance.
 - Exact GPS, biometria y recovery se consideran datos sensibles y nunca se exponen en landing publica.
 - Backups canonical locales se tratan como datos sensibles y solo se exportan por accion explicita del usuario.
 - Provider tokens permanecen server-side/HttpOnly cuando aplica.
