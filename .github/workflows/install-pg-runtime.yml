@@ -1,0 +1,40 @@
+name: Install PostgreSQL runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/install-pg-runtime.yml
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Generate lockfiles
+        working-directory: server
+        run: npm install pg --save-exact --package-lock-only --ignore-scripts
+      - name: Verify install plan
+        working-directory: server
+        run: npm ci --ignore-scripts
+      - name: Commit lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/package.json server/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit"
+            exit 0
+          fi
+          git commit -m "build: install PostgreSQL runtime adapter"
+          git push origin HEAD:main
