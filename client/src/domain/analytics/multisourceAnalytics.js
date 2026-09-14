@@ -58,6 +58,29 @@ function preferredActivity(group) {
   })[0];
 }
 
+function mergedLogicalActivity(group) {
+  const primary = preferredActivity(group);
+  const merged = { ...primary };
+  const identityKeys = new Set(["activityUid", "source", "sourceActivityId"]);
+
+  for (const activity of group) {
+    if (activity === primary) continue;
+    for (const [key, value] of Object.entries(activity ?? {})) {
+      if (identityKeys.has(key)) continue;
+      if ((merged[key] === null || merged[key] === undefined) && value !== null && value !== undefined) {
+        merged[key] = value;
+      }
+    }
+  }
+
+  const qualityFlags = group
+    .flatMap((activity) => Array.isArray(activity?.sourceQualityFlags) ? activity.sourceQualityFlags : [])
+    .filter((flag, index, values) => values.indexOf(flag) === index);
+  if (qualityFlags.length) merged.sourceQualityFlags = qualityFlags;
+
+  return merged;
+}
+
 export function deduplicateCanonicalActivities(activities = []) {
   const groups = new Map();
   for (const activity of activities) {
@@ -67,7 +90,7 @@ export function deduplicateCanonicalActivities(activities = []) {
     groups.set(fingerprint, current);
   }
   return [...groups.entries()].map(([fingerprint, group]) => ({
-    ...preferredActivity(group),
+    ...mergedLogicalActivity(group),
     dedupFingerprint: fingerprint,
     sources: group.map(sourceEvidence),
   })).sort((a, b) => (activityDate(b)?.getTime() ?? 0) - (activityDate(a)?.getTime() ?? 0));
