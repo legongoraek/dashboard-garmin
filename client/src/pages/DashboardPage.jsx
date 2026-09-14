@@ -15,6 +15,7 @@ import MetricSlider from "../components/MetricSlider";
 import RecentActivities from "../components/RecentActivities";
 import WeeklySummary from "../components/WeeklySummary";
 import TrainingHeatmap from "../components/TrainingHeatmap";
+import AnalyticsTrendsSection from "../components/analytics/AnalyticsTrendsSection";
 
 import {
   getActivities,
@@ -680,6 +681,8 @@ export default function DashboardPage({ onLogout }) {
             formatAvg={formatAvg}
             formatSleepScore={formatSleepScore}
           />
+
+          <AnalyticsTrendsSection endDate={selectedDate} />
         </Stack>
       </Container>
     </Box>
