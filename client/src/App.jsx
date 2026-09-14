@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
+import SourcesShortcut from "./components/SourcesShortcut";
 import ActivityExplorerPage from "./pages/ActivityExplorerPage";
 import DashboardPage from "./pages/DashboardPage";
 import DataSourcesPage from "./pages/DataSourcesPage";
@@ -82,6 +83,7 @@ export default function App() {
         <Route path="/sources" element={requireSession(<DataSourcesPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      {hasSession && location.pathname === "/dashboard" && <SourcesShortcut />}
     </ThemeProvider>
   );
 }
