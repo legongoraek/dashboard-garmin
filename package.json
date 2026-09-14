@@ -7,6 +7,7 @@
     "verify": "node scripts/verify.mjs",
     "verify:quick": "node scripts/verify.mjs --quick",
     "verify:install": "node scripts/verify.mjs --install",
+    "verify:runtime": "node scripts/runtimeVerify.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "engines": {
