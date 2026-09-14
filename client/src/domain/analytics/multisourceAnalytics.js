@@ -5,14 +5,21 @@ function numeric(value) {
     : number;
 }
 
-function activityDate(activity) {
-  const value = activity?.startedAtLocal ?? activity?.startedAtUtc;
+function parseActivityDateValue(value) {
   if (!value) return null;
   const normalized = typeof value === "string" && value.includes(" ") && !value.includes("T")
     ? value.replace(" ", "T")
     : value;
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function activityDate(activity) {
+  return parseActivityDateValue(activity?.startedAtLocal ?? activity?.startedAtUtc);
+}
+
+function deduplicationDate(activity) {
+  return parseActivityDateValue(activity?.startedAtUtc ?? activity?.startedAtLocal);
 }
 
 function formatDate(date) {
@@ -25,7 +32,7 @@ function bucket(value, size) {
 }
 
 export function activityFingerprint(activity) {
-  const date = activityDate(activity);
+  const date = deduplicationDate(activity);
   if (!date) return `uid:${activity?.activityUid ?? "unknown"}`;
   const startBucket = Math.round(date.getTime() / (5 * 60 * 1000));
   const type = activity?.activityTypeNorm ?? "other";
