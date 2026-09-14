@@ -10,6 +10,11 @@ export async function getProviderReadiness() {
   return response.data;
 }
 
+export async function getPostgresHealth() {
+  const response = await api.get("/providers/postgres/health");
+  return response.data;
+}
+
 export async function startStravaAuthorization() {
   const response = await api.get("/strava/oauth/start");
   return response.data;
