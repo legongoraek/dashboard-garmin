@@ -30,6 +30,7 @@ import {
   getProviderReadiness,
   startStravaAuthorization,
 } from "../services/providerApi.js";
+import { syncStravaRecentActivities } from "../services/stravaSync.js";
 
 function statusChip(configured, authorized) {
   if (authorized) return <Chip size="small" color="success" label="Conectado" />;
@@ -43,6 +44,7 @@ export default function DataSourcesPage() {
   const [source, setSource] = useState("gpx");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const refresh = async () => {
     const [providerData, imported] = await Promise.all([
@@ -70,6 +72,21 @@ export default function DataSourcesPage() {
   const handleDisconnectStrava = async () => {
     await disconnectStrava();
     await refresh();
+  };
+
+  const handleSyncStrava = async () => {
+    setSyncing(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await syncStravaRecentActivities({ limit: 20 });
+      setMessage(`Strava: ${result.synced} actividades sincronizadas${result.failed ? `, ${result.failed} con streams parciales` : ""}.`);
+      await refresh();
+    } catch (err) {
+      setError(err?.response?.data?.error || err?.message || "No se pudo sincronizar Strava");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleFile = async (event) => {
@@ -135,14 +152,17 @@ export default function DataSourcesPage() {
                 <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
                   <Box>
                     <Typography fontWeight={700}>Strava</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      OAuth2 + actividades + streams.
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">OAuth2 + actividades + streams hacia canonical/IndexedDB.</Typography>
                   </Box>
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" justifyContent="flex-end">
                     {statusChip(Boolean(providers.strava?.configured), Boolean(providers.strava?.authorized))}
                     {providers.strava?.authorized ? (
-                      <Button size="small" onClick={handleDisconnectStrava}>Desconectar</Button>
+                      <>
+                        <Button size="small" variant="contained" startIcon={<CloudSyncIcon />} onClick={handleSyncStrava} disabled={syncing}>
+                          {syncing ? "Sincronizando..." : "Sincronizar 20"}
+                        </Button>
+                        <Button size="small" onClick={handleDisconnectStrava}>Desconectar</Button>
+                      </>
                     ) : (
                       <Button size="small" variant="contained" startIcon={<CloudSyncIcon />} onClick={handleConnectStrava} disabled={!providers.strava?.configured}>
                         Conectar
@@ -198,8 +218,8 @@ export default function DataSourcesPage() {
           <Card>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6" fontWeight={800}>Importaciones locales</Typography>
-                {!imports.length && <Typography color="text.secondary">Todavía no hay actividades importadas.</Typography>}
+                <Typography variant="h6" fontWeight={800}>Actividades canónicas locales</Typography>
+                {!imports.length && <Typography color="text.secondary">Todavía no hay actividades importadas o sincronizadas.</Typography>}
                 {imports.map((detail) => (
                   <Stack key={detail.activity.activityUid} direction="row" justifyContent="space-between" alignItems="center" gap={2}>
                     <Box>
@@ -208,7 +228,10 @@ export default function DataSourcesPage() {
                         {detail.activity.source} · {detail.trackPoints?.length ?? 0} puntos · {detail.activity.distanceM == null ? "sin distancia" : `${(detail.activity.distanceM / 1000).toFixed(2)} km`}
                       </Typography>
                     </Box>
-                    <Button size="small" color="error" onClick={() => handleDelete(detail.activity.activityUid)}>Eliminar</Button>
+                    <Stack direction="row" spacing={1}>
+                      <Button size="small" onClick={() => navigate(`/imported/${encodeURIComponent(detail.activity.activityUid)}`)}>Abrir</Button>
+                      <Button size="small" color="error" onClick={() => handleDelete(detail.activity.activityUid)}>Eliminar</Button>
+                    </Stack>
                   </Stack>
                 ))}
               </Stack>
