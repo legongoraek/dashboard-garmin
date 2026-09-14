@@ -110,8 +110,8 @@ test("dedup does not merge different activities just because date and sport matc
 
 test("YoY compares weekly canonical volume without requesting provider data", () => {
   const rows = [
-    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-05T06:00:00", startedAtUtc: "2026-01-05T12:00:00Z", distanceM: 12000, durationS: 3600 }),
-    activity({ activityUid: "2025-a", startedAtLocal: "2025-01-06T06:00:00", startedAtUtc: "2025-01-06T12:00:00Z", distanceM: 10000, durationS: 3300 }),
+    activity({ activityUid: "2026-a", sourceActivityId: "2026-a", startedAtLocal: "2026-01-05T06:00:00", startedAtUtc: "2026-01-05T12:00:00Z", distanceM: 12000, durationS: 3600 }),
+    activity({ activityUid: "2025-a", sourceActivityId: "2025-a", startedAtLocal: "2025-01-06T06:00:00", startedAtUtc: "2025-01-06T12:00:00Z", distanceM: 10000, durationS: 3300 }),
   ];
 
   const result = buildYearOverYearWeeklyComparison(rows, 2026);
@@ -123,9 +123,9 @@ test("YoY compares weekly canonical volume without requesting provider data", ()
 
 test("YoY summary compares current YTD with the equivalent previous-year window", () => {
   const rows = [
-    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", startedAtUtc: "2026-01-10T12:00:00Z", distanceM: 10000, durationS: 3600 }),
-    activity({ activityUid: "2026-b", startedAtLocal: "2026-02-10T06:00:00", startedAtUtc: "2026-02-10T12:00:00Z", distanceM: 5000, durationS: 1800, elevationGainM: null }),
-    activity({ activityUid: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", distanceM: 8000, durationS: 3200 }),
+    activity({ activityUid: "2026-a", sourceActivityId: "2026-a", startedAtLocal: "2026-01-10T06:00:00", startedAtUtc: "2026-01-10T12:00:00Z", distanceM: 10000, durationS: 3600 }),
+    activity({ activityUid: "2026-b", sourceActivityId: "2026-b", startedAtLocal: "2026-02-10T06:00:00", startedAtUtc: "2026-02-10T12:00:00Z", distanceM: 5000, durationS: 1800, elevationGainM: null }),
+    activity({ activityUid: "2025-a", sourceActivityId: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", distanceM: 8000, durationS: 3200 }),
   ];
 
   const result = buildYearOverYearSummary(rows, "2026-02-28");
@@ -138,8 +138,8 @@ test("YoY summary compares current YTD with the equivalent previous-year window"
 
 test("YoY summary keeps all-missing metrics null", () => {
   const rows = [
-    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", startedAtUtc: "2026-01-10T12:00:00Z", elevationGainM: null }),
-    activity({ activityUid: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", elevationGainM: null }),
+    activity({ activityUid: "2026-a", sourceActivityId: "2026-a", startedAtLocal: "2026-01-10T06:00:00", startedAtUtc: "2026-01-10T12:00:00Z", elevationGainM: null }),
+    activity({ activityUid: "2025-a", sourceActivityId: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", elevationGainM: null }),
   ];
 
   const result = buildYearOverYearSummary(rows, "2026-02-28");

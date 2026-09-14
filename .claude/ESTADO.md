@@ -127,19 +127,11 @@ Estado de codigo: completado para todo lo que no requiere servicios externos.
 - Deploy Vercel/Render es una capa de ejecucion; no es el gate tecnico del codigo.
 
 ## Verificacion realizada en esta sesion
-- TDD RED reproducido para el defecto de dedup en limite de bucket: el algoritmo anterior devolvia 2 actividades logicas para registros equivalentes separados por segundos.
-- TDD RED reproducido para el gate local: la secuencia anterior omitía `root:test`.
-- TDD RED reproducido para runtime: no existia resolucion de URL/puerto efimero.
-- TDD RED reproducido para lifecycle: no existia `createShutdownHandler`.
-- Verificacion local aislada con Node 22 de los modulos nuevos/actualizados, sin depender de GitHub Actions:
-  - verification plan
-  - smoke/runtime helpers
-  - lifecycle
-  - 13 tests ejecutados
-  - 13 pass
-  - 0 fail
-- No se declara una verificacion completa del workspace en este entorno porque no dispone de un checkout completo con todas las dependencias instaladas.
-- La evidencia completa debe obtenerse en un checkout local real mediante `npm run verify:install`; despues, `npm run verify` es el gate diario.
+- **P-004 cerrado: `npm run verify:install` ejecutado por primera vez en checkout local real (Windows, Node v22.23.1, `D:\Proyectos\dashboard-garmin`).** PASS end-to-end: client:install, server:install, root:test, client:test (67 tests), client:lint, client:build, server:test (26 tests), root:runtime.
+- Esta primera corrida real encontro y arreglo 2 bugs genuinos que ninguna verificacion aislada previa habia detectado:
+  1. `scripts/verify.mjs`: `spawnSync("npm.cmd", args, { shell: false })` revienta con `EINVAL` en Node 22 sobre Windows (bug conocido de Node al invocar `.cmd` sin shell). Fix: `shell: process.platform === "win32"`.
+  2. `client/src/domain/analytics/multisourceAnalytics.test.js` (tests YoY, linea ~111 en adelante): las fixtures de actividades de anios distintos (2025 vs 2026) no sobrescribian `sourceActivityId` y compartian el default `"1"` del helper `activity()`. `sameIdentity()` matchea por `(source, sourceActivityId)`, asi que el dedup las fusionaba en una sola actividad logica, perdiendo los datos de uno de los dos anios. Fix: `sourceActivityId` unico por fixture. Bug de test, no de la logica de dedup en si.
+- Commit de evidencia: ver `git log` (mensaje `fix: run npm.cmd via shell on Windows verify` o similar en esta sesion).
 
 ## Blockers externos reales
 1. Strava live requiere `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` y autorizacion OAuth.
@@ -159,3 +151,6 @@ Estado de codigo: completado para todo lo que no requiere servicios externos.
 - Provider tokens permanecen server-side/HttpOnly cuando aplica.
 - Nunca automatizar ni almacenar credenciales Garmin reales del usuario.
 - Nunca usar NTFS junctions para exponer repos git separados dentro de worktrees.
+
+## Siguiente paso concreto
+P-004 y la implementacion de codigo (fases 1-10) estan cerrados. Lo unico que queda en `PENDIENTES.md` (P-001, P-002, P-003, P-005) depende de activaciones externas fuera del alcance de una sesion de codigo: credenciales/OAuth Strava, aprobacion Garmin Developer Program, y provisionar PostgreSQL/PostGIS + `DATABASE_URL`. Al retomar: preguntar al usuario si ya tiene alguna de esas 3 cosas lista; si es asi, activar esa integracion y correr el smoke live correspondiente (P-005). Si no, no hay trabajo de codigo ejecutable pendiente en este proyecto por ahora.

@@ -19,7 +19,7 @@ for (const step of steps) {
     cwd: step.cwd,
     stdio: "inherit",
     env: process.env,
-    shell: false,
+    shell: process.platform === "win32",
   });
 
   if (result.error) {
