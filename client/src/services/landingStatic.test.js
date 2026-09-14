@@ -22,8 +22,14 @@ test("landing page contains public project, capability, privacy, and CTA content
   assert.match(landing, /Material UI/);
   assert.match(landing, /Leaflet/);
   assert.match(landing, /no es un producto oficial de Garmin/i);
-  assert.match(landing, /to=\{hasSession \? "\/dashboard" : "\/login"\}/);
   assert.match(landing, /github\.com\/legongoraek\/dashboard-garmin/);
+});
+
+test("landing page does not offer a public login CTA", async () => {
+  const landing = await readClientFile("src/pages/LandingPage.jsx");
+  assert.doesNotMatch(landing, /\/login/);
+  assert.match(landing, /una única cuenta de Garmin/i);
+  assert.match(landing, /hasSession && \(/);
 });
 
 test("landing page does not import authenticated data services", async () => {
