@@ -91,3 +91,8 @@ test("6m and 1y periods use calendar subtraction", () => {
   assert.equal(getPeriodStartDate("2026-09-13", "6m"), "2026-03-13");
   assert.equal(getPeriodStartDate("2026-09-13", "1y"), "2025-09-13");
 });
+
+test("calendar subtraction clamps to the last valid target day", () => {
+  assert.equal(getPeriodStartDate("2026-08-31", "6m"), "2026-02-28");
+  assert.equal(getPeriodStartDate("2024-02-29", "1y"), "2023-02-28");
+});
