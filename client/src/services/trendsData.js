@@ -14,6 +14,7 @@ import {
   buildRecoverySeries,
   getPeriodStartDate,
 } from "../domain/analytics/trends.js";
+import { archiveCanonicalActivities } from "./localAnalyticsArchive.js";
 
 const defaultApi = { getActivities, getWeekly, getHrv, getReadiness };
 
@@ -93,6 +94,7 @@ export async function loadAnalyticsTrends({
   endDate,
   period = "4w",
   api = defaultApi,
+  archiveFn = typeof indexedDB === "undefined" ? null : archiveCanonicalActivities,
 } = {}) {
   const from = getPeriodStartDate(endDate, period);
   const to = endDate;
@@ -106,6 +108,14 @@ export async function loadAnalyticsTrends({
     activities = Array.isArray(rawActivities)
       ? rawActivities.map(normalizeGarminActivity)
       : [];
+
+    if (archiveFn && activities.length) {
+      try {
+        await archiveFn(activities);
+      } catch (archiveError) {
+        addPartialError(partialErrors, "local-archive", null, archiveError);
+      }
+    }
   } catch (error) {
     if (isTerminalSourceError(error)) throw error;
     addPartialError(partialErrors, "activities", null, error);
