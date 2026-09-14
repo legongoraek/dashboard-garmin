@@ -76,11 +76,12 @@ _Ultima actualizacion: 2026-09-14_
 6. Login Garmin puede seguir bloqueado desde IP de Render por reputacion/rate-limit real del datacenter.
 
 ## Verificacion
-- Se agrego `.github/workflows/ci.yml` para validar en cada push/PR a main:
+- `.github/workflows/ci.yml` valida en cada push/PR a main:
   - client: `npm ci`, `npm test`, `npm run lint`, `npm run build`
   - server: `npm ci`, `npm test`
-- Vercel sigue limitado por build-rate-limit del plan; no usar ese estado como evidencia de fallo de codigo.
-- No declarar el rollout totalmente verde hasta observar una corrida CI fresca o ejecutar los comandos localmente.
+- CI run #4 (`8583e5b7dd2c2b3bad9aad9e198354e5bab2764e`) termino `success`: client tests + lint + build y server tests pasaron.
+- La primera corrida encontro dos violaciones React 19 `set-state-in-effect`; fueron corregidas sin desactivar reglas y la corrida #4 confirmo el fix.
+- Vercel sigue limitado por build-rate-limit del plan; GitHub Actions es el gate tecnico confiable mientras dure ese limite.
 
 ## Decisiones fijas
 - UI/analytics nuevos consumen canonical, nunca payloads provider-specific.
