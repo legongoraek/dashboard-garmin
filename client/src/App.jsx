@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
-import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
 import { wakeUpBackend } from "./services/garminApi";
+import {
+  clearSession,
+  hasStoredSession,
+  storeSession,
+} from "./services/sessionRouting";
 
 const theme = createTheme({
   palette: {
@@ -21,35 +28,57 @@ const theme = createTheme({
 });
 
 export default function App() {
-  const [hasSession, setHasSession] = useState(
-    () => localStorage.getItem("garmin_session") === "true",
-  );
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [hasSession, setHasSession] = useState(() => hasStoredSession(localStorage));
 
   useEffect(() => {
-    wakeUpBackend().catch((error) => {
-      console.warn("No se pudo despertar el backend:", error);
-    });
-  }, []);
+    if (location.pathname === "/login" || location.pathname === "/dashboard") {
+      wakeUpBackend().catch((error) => {
+        console.warn("No se pudo despertar el backend:", error);
+      });
+    }
+  }, [location.pathname]);
 
   const handleLoginSuccess = () => {
-    localStorage.setItem("garmin_session", "true");
+    storeSession(localStorage);
     setHasSession(true);
+    navigate("/dashboard", { replace: true });
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("garmin_session");
+    clearSession(localStorage);
     setHasSession(false);
+    navigate("/login", { replace: true });
   };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-
-      {hasSession ? (
-        <DashboardPage onLogout={handleLogout} />
-      ) : (
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
-      )}
+      <Routes>
+        <Route path="/" element={<LandingPage hasSession={hasSession} />} />
+        <Route
+          path="/login"
+          element={
+            hasSession ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage onLoginSuccess={handleLoginSuccess} />
+            )
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            hasSession ? (
+              <DashboardPage onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </ThemeProvider>
   );
 }
