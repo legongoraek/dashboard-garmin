@@ -36,6 +36,25 @@ function mondayForDate(date) {
   return result;
 }
 
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function subtractCalendarMonths(date, months) {
+  const absoluteMonth = date.getFullYear() * 12 + date.getMonth() - months;
+  const targetYear = Math.floor(absoluteMonth / 12);
+  const targetMonth = ((absoluteMonth % 12) + 12) % 12;
+  const targetDay = Math.min(date.getDate(), daysInMonth(targetYear, targetMonth));
+  return new Date(targetYear, targetMonth, targetDay);
+}
+
+function subtractCalendarYears(date, years) {
+  const targetYear = date.getFullYear() - years;
+  const targetMonth = date.getMonth();
+  const targetDay = Math.min(date.getDate(), daysInMonth(targetYear, targetMonth));
+  return new Date(targetYear, targetMonth, targetDay);
+}
+
 export function getPeriodStartDate(endDate, key) {
   const period = PERIODS[key];
   if (!period) {
@@ -47,17 +66,21 @@ export function getPeriodStartDate(endDate, key) {
     throw new Error(`Invalid end date: ${endDate}`);
   }
 
-  const start = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-
   if (period.days) {
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate());
     start.setDate(start.getDate() - (period.days - 1));
-  } else if (period.months) {
-    start.setMonth(start.getMonth() - period.months);
-  } else if (period.years) {
-    start.setFullYear(start.getFullYear() - period.years);
+    return formatLocalDate(start);
   }
 
-  return formatLocalDate(start);
+  if (period.months) {
+    return formatLocalDate(subtractCalendarMonths(end, period.months));
+  }
+
+  if (period.years) {
+    return formatLocalDate(subtractCalendarYears(end, period.years));
+  }
+
+  return formatLocalDate(end);
 }
 
 export function aggregateActivitiesByWeek(activities = []) {
