@@ -7,13 +7,15 @@ on:
       - .github/workflows/generate-fit-lock.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,6 +27,17 @@ jobs:
       - name: Verify install plan
         working-directory: client
         run: npm ci --ignore-scripts
+      - name: Commit lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/package.json client/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit"
+            exit 0
+          fi
+          git commit -m "build: install Garmin FIT SDK"
+          git push origin HEAD:main
       - uses: actions/upload-artifact@v4
         with:
           name: fit-lockfiles
