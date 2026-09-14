@@ -38,3 +38,18 @@ test("crawler and generative-engine discovery files point at the canonical site"
   assert.match(llms, /Canonical URL: https:\/\/dashboard-garmin-azure\.vercel\.app\//);
   assert.match(llms, /dashboard independiente/i);
 });
+
+test("search discovery promotes only the public landing", async () => {
+  const [robots, sitemap, llms] = await Promise.all([
+    readClientFile("public/robots.txt"),
+    readClientFile("public/sitemap.xml"),
+    readClientFile("public/llms.txt"),
+  ]);
+
+  assert.match(robots, /Disallow: \/login/);
+  assert.match(robots, /Disallow: \/dashboard/);
+  assert.doesNotMatch(sitemap, /<loc>[^<]*\/login<\/loc>/);
+  assert.doesNotMatch(sitemap, /<loc>[^<]*\/dashboard<\/loc>/);
+  assert.match(llms, /landing pública/i);
+  assert.match(llms, /área autenticada/i);
+});
