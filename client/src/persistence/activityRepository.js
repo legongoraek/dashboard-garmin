@@ -69,3 +69,7 @@ export async function listCanonicalActivities() {
 export async function deleteCanonicalActivity(activityUid) {
   await withStore("readwrite", (store) => store.delete(activityUid));
 }
+
+export async function clearCanonicalActivities() {
+  await withStore("readwrite", (store) => store.clear());
+}
