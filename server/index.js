@@ -91,7 +91,7 @@ app.post("/api/login", async (req, res) => {
     if (loginBlockedUntil && Date.now() < loginBlockedUntil) {
       return res.status(429).json({
         ok: false,
-        error: "Login temporalmente bloqueado por límite de Garmin. Intenta más tarde.",
+        error: "Login deshabilitado temporalmente tras un rechazo de Garmin, para no insistir contra el mismo bloqueo. Este dashboard funciona con una sola cuenta (la del autor).",
       });
     }
 
@@ -108,7 +108,7 @@ app.post("/api/login", async (req, res) => {
     setTokensCookie(res, tokens);
     return res.json(body);
   } catch (error) {
-    if (error.message.includes("Garmin bloqueó temporalmente")) {
+    if (error.message.includes("Garmin rechazó este login")) {
       loginBlockedUntil = Date.now() + 15 * 60 * 1000;
     }
     return res.status(500).json({

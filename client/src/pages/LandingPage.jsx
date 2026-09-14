@@ -194,6 +194,19 @@ export default function LandingPage({ hasSession = false }) {
                     Ver código fuente
                   </Button>
                 </Stack>
+
+                {!hasSession && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ maxWidth: 520 }}
+                  >
+                    Este dashboard está vinculado a una única cuenta de Garmin, la del autor.
+                    No es un servicio de registro abierto: no vas a poder entrar con tu propia
+                    cuenta. Si te interesa el proyecto, la opción disponible es revisar el
+                    código fuente.
+                  </Typography>
+                )}
               </Stack>
 
               <Card

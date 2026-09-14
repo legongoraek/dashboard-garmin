@@ -69,7 +69,7 @@ async function runGarminCommand(args = [], env = {}, incomingTokens = null) {
             console.error(`[garmin] rate-limit detected in output: ${errorOutput}`);
             return reject(
               new Error(
-                "Garmin bloqueó temporalmente el login por demasiados intentos. Espera unos minutos antes de volver a intentar."
+                "Garmin rechazó este login. En este servidor suele deberse a que Garmin bloquea la reputación de la IP del hosting, no a tu usuario/contraseña — reintentar no suele arreglarlo. Este dashboard funciona con una sola cuenta (la del autor); si eres el autor, revisa GUIA.md sección 4."
               )
             );
           }
