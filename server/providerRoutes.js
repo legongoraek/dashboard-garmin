@@ -5,9 +5,9 @@ import {
   getStravaActivities,
   getStravaActivityStreams,
   getStravaAuthorizationUrl,
-  getStravaReadiness,
   revokeStravaToken,
 } from "./stravaService.js";
+import { buildProviderReadiness } from "./providerReadiness.js";
 
 const router = Router();
 const isProd = process.env.NODE_ENV !== "development";
@@ -39,43 +39,11 @@ function setStravaTokens(res, tokens) {
   });
 }
 
-function officialGarminReadiness(env = process.env) {
-  const approved = env.GARMIN_DEVELOPER_APPROVED === "true";
-  const configured = Boolean(approved && env.GARMIN_DEVELOPER_CLIENT_ID && env.GARMIN_DEVELOPER_CLIENT_SECRET);
-  return {
-    approved,
-    configured,
-    blocker: configured ? null : "Garmin Developer Program approval and issued credentials are required",
-  };
-}
-
 router.get("/providers", (req, res) => {
-  const strava = getStravaReadiness();
-  const garminOfficial = officialGarminReadiness();
-  const databaseUrlPresent = Boolean(process.env.DATABASE_URL);
-  res.json({
-    ok: true,
-    providers: {
-      garmin: { configured: true, mode: "legacy_personal" },
-      strava: { ...strava, authorized: Boolean(parseCookieJson(req, STRAVA_TOKENS_COOKIE)?.access_token) },
-      garmin_official: garminOfficial,
-      fit: {
-        configured: false,
-        mode: "file_import",
-        blocker: "Install and lock @garmin/fitsdk in the client build to enable binary FIT decoding",
-      },
-      gpx: { configured: true, mode: "file_import" },
-      komoot: { configured: true, mode: "gpx_import" },
-    },
-    persistence: {
-      browserIndexedDb: true,
-      databaseUrlPresent,
-      postgresPostgisConfigured: false,
-      blocker: databaseUrlPresent
-        ? "PostgreSQL schema is ready, but a runtime pg adapter is not installed yet"
-        : "DATABASE_URL and a runtime pg adapter are required for server persistence",
-    },
-  });
+  const stravaAuthorized = Boolean(
+    parseCookieJson(req, STRAVA_TOKENS_COOKIE)?.access_token
+  );
+  res.json(buildProviderReadiness(process.env, { stravaAuthorized }));
 });
 
 router.get("/strava/oauth/start", (req, res) => {
