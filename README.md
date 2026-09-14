@@ -2,6 +2,8 @@
 
 Dashboard web para visualización y seguimiento de información relacionada con Garmin y otras fuentes de actividad normalizadas a un modelo canónico.
 
+Para usar el dashboard ya desplegado, activar Strava/Garmin Developer/PostgreSQL, o desplegar el proyecto desde cero, ver [GUIA.md](GUIA.md).
+
 ## Validación autónoma local
 
 GitHub Actions no es un requisito ni la fuente de verdad del proyecto. La validación oficial del código se ejecuta desde el propio repositorio y funciona en Windows/Linux con Node.js 22+.
