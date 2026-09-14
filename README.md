@@ -27,3 +27,11 @@ La capa pública incluye:
 - Pruebas automatizadas para evitar regresiones en estos archivos.
 
 El contenido autenticado y los datos personales del dashboard no se exponen como contenido indexable. El proyecto se describe como un dashboard independiente y no como un producto oficial de Garmin.
+
+## Rutas del frontend
+
+- `/` — landing pública e indexable del proyecto.
+- `/login` — acceso con Garmin Connect y MFA cuando es requerido.
+- `/dashboard` — dashboard privado; requiere la sesión local existente.
+
+La landing no consulta la API de Garmin. El contenido personal se mantiene dentro del área autenticada. Vercel usa una reescritura SPA para permitir acceso directo y refresh en las rutas del cliente.
