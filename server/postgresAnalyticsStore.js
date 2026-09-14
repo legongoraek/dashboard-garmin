@@ -148,6 +148,7 @@ export async function saveCanonicalActivityBundle(pool, detail) {
       await client.query(query.text, query.values);
     }
 
+    await client.query("DELETE FROM activity_track_points WHERE activity_id = $1", [activityId]);
     for (const point of detail.trackPoints ?? []) {
       const query = buildTrackPointInsert(point, activityId);
       await client.query(query.text, query.values);
