@@ -25,6 +25,9 @@ export function buildVerificationSteps({ rootDir, quick = false, install = false
     );
   }
   steps.push({ label: "server:test", cwd: serverDir, args: ["test"] });
+  if (!quick) {
+    steps.push({ label: "root:runtime", cwd: rootDir, args: ["run", "verify:runtime"] });
+  }
 
   return steps;
 }
