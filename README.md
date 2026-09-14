@@ -6,29 +6,51 @@ Dashboard web para visualización y seguimiento de información relacionada con 
 
 GitHub Actions no es un requisito ni la fuente de verdad del proyecto. La validación oficial del código se ejecuta desde el propio repositorio y funciona en Windows/Linux con Node.js 22+.
 
-Desde la raíz:
+Desde la raíz, para una validación reproducible desde dependencias limpias:
 
 ```bash
 npm run verify:install
 ```
 
-Ejecuta instalación reproducible (`npm ci`) en `client` y `server`, seguida de:
+Ejecuta `npm ci` en `client` y `server`, seguido de:
 
-- client tests
-- client lint
-- client build
-- server tests
+1. tests de los scripts raíz de verificación/smoke;
+2. client tests;
+3. client lint;
+4. client build;
+5. server tests;
+6. runtime smoke autocontenido del backend.
 
-Para iteraciones rápidas sin reinstalar dependencias:
+Para iteraciones normales sin reinstalar dependencias:
 
 ```bash
 npm run verify
+```
+
+Para una pasada rápida de tests, sin lint/build/runtime smoke:
+
+```bash
 npm run verify:quick
 ```
 
-`verify` ejecuta la validación completa usando las dependencias ya instaladas. `verify:quick` ejecuta únicamente tests de client y server.
+`verify:quick` ejecuta tests raíz + tests de client + tests de server.
 
-Con el backend en ejecución se puede validar liveness y readiness básica de providers sin credenciales externas:
+### Runtime smoke autocontenido
+
+No es necesario levantar manualmente el backend para validar su liveness/readiness básica:
+
+```bash
+npm run verify:runtime
+```
+
+Este comando inicia el backend en un puerto efímero, valida:
+
+- `/api/health`;
+- `/api/providers`;
+
+Luego cierra el servidor de forma limpia. No requiere credenciales de Strava, Garmin Developer ni PostgreSQL/PostGIS.
+
+### Smoke de una instancia ya desplegada o levantada
 
 ```bash
 npm run smoke
@@ -43,6 +65,8 @@ npm run smoke -- --base-url=https://dashboard-garmin.onrender.com
 También puede definirse `API_BASE_URL`.
 
 Los scripts devuelven exit code distinto de cero ante cualquier fallo, por lo que pueden utilizarse desde PowerShell, CMD, Bash, un IDE, hooks locales o cualquier plataforma de CI/CD. CI/CD es una capa opcional, no un gate necesario para desarrollar o comprobar el proyecto.
+
+El backend también registra shutdown limpio ante `SIGTERM` y `SIGINT`, importante para reinicios/despliegues en plataformas como Render.
 
 ## Sitios publicados
 
