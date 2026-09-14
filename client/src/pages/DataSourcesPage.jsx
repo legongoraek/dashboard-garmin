@@ -56,7 +56,20 @@ export default function DataSourcesPage() {
   };
 
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    Promise.all([
+      getProviderReadiness().catch(() => null),
+      listCanonicalActivities().catch(() => []),
+    ]).then(([providerData, imported]) => {
+      if (!cancelled) {
+        setReadiness(providerData);
+        setImports(imported);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleConnectStrava = async () => {
