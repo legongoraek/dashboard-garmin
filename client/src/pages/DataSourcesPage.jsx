@@ -28,6 +28,7 @@ import {
 } from "../persistence/activityRepository.js";
 import {
   disconnectStrava,
+  getPostgresHealth,
   getProviderReadiness,
   startStravaAuthorization,
 } from "../services/providerApi.js";
@@ -46,6 +47,9 @@ export default function DataSourcesPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [insightsVersion, setInsightsVersion] = useState(0);
+  const [postgresHealth, setPostgresHealth] = useState(null);
+  const [checkingPostgres, setCheckingPostgres] = useState(false);
 
   const refresh = async () => {
     const [providerData, imported] = await Promise.all([
@@ -54,6 +58,7 @@ export default function DataSourcesPage() {
     ]);
     setReadiness(providerData);
     setImports(imported);
+    setInsightsVersion((value) => value + 1);
   };
 
   useEffect(() => {
@@ -100,6 +105,22 @@ export default function DataSourcesPage() {
       setError(err?.response?.data?.error || err?.message || "No se pudo sincronizar Strava");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleCheckPostgres = async () => {
+    setCheckingPostgres(true);
+    setPostgresHealth(null);
+    try {
+      const result = await getPostgresHealth();
+      setPostgresHealth(result);
+    } catch (err) {
+      setPostgresHealth({
+        ok: false,
+        error: err?.response?.data?.error || "PostgreSQL/PostGIS no está disponible",
+      });
+    } finally {
+      setCheckingPostgres(false);
     }
   };
 
@@ -187,6 +208,16 @@ export default function DataSourcesPage() {
 
                 <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
                   <Box>
+                    <Typography fontWeight={700}>FIT</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Decodificación binaria con @garmin/fitsdk y normalización canonical.
+                    </Typography>
+                  </Box>
+                  {statusChip(Boolean(providers.fit?.configured), false)}
+                </Stack>
+
+                <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
+                  <Box>
                     <Typography fontWeight={700}>Garmin Developer Program</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Activity API / Health API. Requiere aprobación y credenciales emitidas por Garmin.
@@ -198,9 +229,31 @@ export default function DataSourcesPage() {
                 <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
                   <Box>
                     <Typography fontWeight={700}>PostgreSQL + PostGIS</Typography>
-                    <Typography variant="body2" color="text.secondary">Persistencia server-side opcional; IndexedDB permanece como default local.</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Runtime `pg` instalado; se activa con DATABASE_URL y la migración analytics.
+                    </Typography>
+                    {postgresHealth?.ok && (
+                      <Typography variant="caption" color="success.main">
+                        Conexión verificada · PostGIS {postgresHealth.postgisVersion || "disponible"}
+                      </Typography>
+                    )}
+                    {postgresHealth && !postgresHealth.ok && (
+                      <Typography variant="caption" color="error.main">
+                        {postgresHealth.error}
+                      </Typography>
+                    )}
                   </Box>
-                  {statusChip(Boolean(readiness?.persistence?.postgresPostgisConfigured), false)}
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {statusChip(Boolean(readiness?.persistence?.postgresPostgisConfigured), false)}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={handleCheckPostgres}
+                      disabled={!readiness?.persistence?.postgresPostgisConfigured || checkingPostgres}
+                    >
+                      {checkingPostgres ? "Verificando..." : "Verificar"}
+                    </Button>
+                  </Stack>
                 </Stack>
               </Stack>
             </CardContent>
@@ -211,7 +264,7 @@ export default function DataSourcesPage() {
               <Stack spacing={2}>
                 <Typography variant="h6" fontWeight={800}>Importar actividad</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  GPX y exports GPX de Komoot funcionan sin cuentas adicionales. FIT usa el adapter preparado para el SDK oficial de Garmin.
+                  GPX, exports GPX de Komoot y archivos FIT se importan directamente al modelo canónico local.
                 </Typography>
                 <FormControl size="small" sx={{ maxWidth: 260 }}>
                   <InputLabel id="source-label">Origen</InputLabel>
@@ -229,7 +282,7 @@ export default function DataSourcesPage() {
             </CardContent>
           </Card>
 
-          <LocalMultisourceInsights />
+          <LocalMultisourceInsights refreshToken={insightsVersion} />
 
           <Card>
             <CardContent>
