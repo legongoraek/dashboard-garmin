@@ -4,6 +4,7 @@ import {
   activityFingerprint,
   deduplicateCanonicalActivities,
   buildYearOverYearWeeklyComparison,
+  buildYearOverYearSummary,
 } from "./multisourceAnalytics.js";
 
 function activity(overrides = {}) {
@@ -35,8 +36,8 @@ test("fingerprint groups equivalent activities across providers", () => {
   assert.equal(activityFingerprint(garmin), activityFingerprint(strava));
 });
 
-test("dedup keeps one logical activity and preserves all source evidence", () => {
-  const garmin = activity();
+test("dedup keeps one logical activity, preserves evidence, and prefers the richest record", () => {
+  const garmin = activity({ avgHeartRateBpm: 152, avgPowerW: null });
   const strava = activity({
     activityUid: "strava:22",
     source: "strava",
@@ -44,10 +45,13 @@ test("dedup keeps one logical activity and preserves all source evidence", () =>
     startedAtLocal: "2026-09-10T06:01:00",
     durationS: 3595,
     distanceM: 10020,
+    avgHeartRateBpm: 151,
+    avgPowerW: 238,
+    deviceModel: "Edge",
   });
 
   const [logical] = deduplicateCanonicalActivities([garmin, strava]);
-  assert.equal(logical.activityUid, "garmin:1");
+  assert.equal(logical.activityUid, "strava:22");
   assert.equal(logical.sources.length, 2);
   assert.deepEqual(logical.sources.map((row) => row.source).sort(), ["garmin", "strava"]);
 });
@@ -76,4 +80,31 @@ test("YoY compares weekly canonical volume without requesting provider data", ()
   assert.equal(result[0].current.distanceM, 12000);
   assert.equal(result[0].previous.distanceM, 10000);
   assert.equal(result[0].distanceDeltaM, 2000);
+});
+
+test("YoY summary compares current YTD with the equivalent previous-year window", () => {
+  const rows = [
+    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", distanceM: 10000, durationS: 3600 }),
+    activity({ activityUid: "2026-b", startedAtLocal: "2026-02-10T06:00:00", distanceM: 5000, durationS: 1800, elevationGainM: null }),
+    activity({ activityUid: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", distanceM: 8000, durationS: 3200 }),
+  ];
+
+  const result = buildYearOverYearSummary(rows, "2026-02-28");
+  assert.equal(result.current.activityCount, 2);
+  assert.equal(result.previous.activityCount, 1);
+  assert.equal(result.current.distanceM, 15000);
+  assert.equal(result.previous.distanceM, 8000);
+  assert.equal(result.change.distancePct, 87.5);
+});
+
+test("YoY summary keeps all-missing metrics null", () => {
+  const rows = [
+    activity({ activityUid: "2026-a", startedAtLocal: "2026-01-10T06:00:00", elevationGainM: null }),
+    activity({ activityUid: "2025-a", startedAtLocal: "2025-01-10T06:00:00", startedAtUtc: "2025-01-10T12:00:00Z", elevationGainM: null }),
+  ];
+
+  const result = buildYearOverYearSummary(rows, "2026-02-28");
+  assert.equal(result.current.elevationGainM, null);
+  assert.equal(result.previous.elevationGainM, null);
+  assert.equal(result.change.elevationGainPct, null);
 });
