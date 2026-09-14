@@ -1,5 +1,10 @@
 export const CANONICAL_SOURCE = Object.freeze({
   GARMIN: "garmin",
+  GARMIN_OFFICIAL: "garmin_official",
+  STRAVA: "strava",
+  FIT: "fit",
+  GPX: "gpx",
+  KOMOOT: "komoot",
 });
 
 export function createCanonicalActivity(values = {}) {
