@@ -23,7 +23,7 @@ function sourceLabel(source) {
   return labels[source] ?? source;
 }
 
-export default function LocalMultisourceInsights() {
+export default function LocalMultisourceInsights({ refreshToken = "" }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -33,7 +33,10 @@ export default function LocalMultisourceInsights() {
     Promise.resolve()
       .then(() => loadLocalMultisourceInsights())
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (!cancelled) {
+          setData(result);
+          setError("");
+        }
       })
       .catch((loadError) => {
         if (!cancelled) setError(loadError?.message || "No se pudo cargar la analítica multisource local");
@@ -42,7 +45,7 @@ export default function LocalMultisourceInsights() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshToken]);
 
   const yoyChart = useMemo(
     () =>
