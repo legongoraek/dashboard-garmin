@@ -1,159 +1,33 @@
 # Estado del proyecto - dashboard-garmin
-_Ultima actualizacion: 2026-09-14_
+_Ultima actualizacion: 2026-09-14 12:30_
 
-## Estado general
-- Desarrollo directo a `main` por instruccion explicita del usuario.
-- GitHub se usa para versionado; GitHub Actions/CI/CD no es requisito ni fuente de verdad para validar el proyecto.
-- La validacion oficial debe ejecutarse localmente desde el repositorio con los scripts raiz.
-- Arquitectura provider-agnostic basada en modelo canonical.
-- Fases 1-10: codigo implementable sin credenciales/infraestructura externa cubierto. Lo pendiente se limita a activaciones externas y smoke tests contra servicios reales.
+## Hecho
+- Fases 1-10 del proyecto (canonical model, analytics multisource, providers Garmin/Strava/FIT/GPX/Komoot, persistencia IndexedDB + Postgres/PostGIS preparado, validacion autonoma local, produccion/operabilidad) cerradas por sesiones previas (ver commits hasta `958f688`). Local estaba 194 commits detras de `origin/main`; se hizo `git pull --ff-only` para sincronizar.
+- **P-004 cerrado (commit `122345d`, pusheado):** `npm run verify:install` corrido por primera vez en checkout Windows real, PASS end-to-end (93 tests: client:install, server:install, root:test, client:test, client:lint, client:build, server:test, root:runtime). Encontro y arreglo 2 bugs reales:
+  1. `scripts/verify.mjs` — `spawnSync("npm.cmd", ..., {shell:false})` tiraba `EINVAL` en Node 22/Windows. Fix: `shell: process.platform === "win32"`.
+  2. `client/src/domain/analytics/multisourceAnalytics.test.js` (tests YoY) — fixtures de anios distintos compartian `sourceActivityId` default `"1"`, `sameIdentity()` las fusionaba en una sola actividad. Fix: `sourceActivityId` unico por fixture.
+- **`GUIA.md` creada y enlazada desde `README.md`** (commits `b24b999`, `0dedcd1`): pasos exactos para activar Strava/Garmin Developer/PostgreSQL (env vars + verificacion), como usar el dashboard ya desplegado, y como desplegar desde cero (Render + Vercel, mismo patron que la instancia real). Deja explicito que Garmin oficial solo tiene la bandera de readiness, sin cliente real implementado todavia.
+- **P-001 (Strava) aclarado con el usuario:** confirmo que tiene cuenta Strava gratuita, sin suscripcion paga. Se confirmo que la API de Strava (crear app, `Client ID`/`Secret`) no requiere plan pago, solo cuenta. Bloqueo pasa a ser solo "falta que el usuario cree la app y entregue credenciales" (commit `38fd909`).
+- **P-002 (Garmin Developer Program) investigado en vivo** (developer.garmin.com/gc-developer-program, overview + FAQ, 2026-09-14): es explicitamente "for business use"/"enterprise use", no personal; sin costo base pero "algunas metricas pueden requerir license fee o minimo de dispositivos para uso comercial"; no hay boton/link de solicitud visible en la pagina, y el banner "Stay tuned for more updates on the program" sugiere que las solicitudes nuevas estan pausadas. Prioridad bajada a P3 en `PENDIENTES.md` (commit `58b3fec`) — no vale la pena perseguirlo para un proyecto personal por ahora.
 
-## Fases 1-7
+## En curso
+- Nada a medias. Todo lo de esta sesion esta commiteado y pusheado a `origin/main` (ultimo commit `58b3fec`).
 
-### Canonical + analytics + trends
-- Activity, DailyHealth, Sleep, Recovery, Sample y TrackPoint canonical.
-- Garmin normalizer con provenance y preservacion estricta de `null` vs `0`.
-- Analytics para `7d`, `4w`, `12w`, `6m`, `1y`, rolling averages y errores parciales.
-- Recharts provider-agnostic.
+## Pendiente
+En `PENDIENTES.md` (fuente de verdad compartida entre agentes):
+1. **P-001 (P1, BLOQUEADO):** usuario debe crear la app en strava.com/settings/api (gratis, ya confirmado que no necesita suscripcion) y entregar `STRAVA_CLIENT_ID`/`STRAVA_CLIENT_SECRET`. Pasos detallados en `GUIA.md` seccion 1.1. Cuando los tenga, configurar en Render, correr flujo OAuth y cerrar P-005 para Strava.
+2. **P-003 (P1, BLOQUEADO):** provisionar Postgres con PostGIS + `DATABASE_URL`, correr `npm run migrate:analytics` desde `server/`. Pasos en `GUIA.md` seccion 1.3. Sin decision del usuario de hacerlo todavia.
+3. **P-002 (P3, BLOQUEADO, baja prioridad):** Garmin Developer Program — requiere que el usuario decida si aplica pese a ser "business use" y a que las solicitudes parecen pausadas, o que se espere a que el programa reabra. Sin accion mia pendiente hasta que el usuario decida.
+4. **P-005 (P2, PENDIENTE):** smoke live contra providers activados — depende de que se resuelva P-001 o P-003 primero.
+5. **P-006 (P2, BLOQUEADO, nuevo):** Garmin bloquea el login legacy inicial desde la IP de Render (reputacion de IP de datacenter). Decision: esperar y ver, sin accion activa — detalle completo de restricciones y workaround en `PENDIENTES.md`.
 
-### Activity Explorer
-- `/activities/:id` para Garmin.
-- `/imported/:id` para actividad canonical local/importada.
-- Ruta, elevacion, FC, velocidad, cadencia y potencia cuando existen.
-
-### Persistencia
-- IndexedDB `dashboard-garmin-analytics` como default cero-infra.
-- Backup/restauracion/borrado canonical local.
-- Archivo historico Garmin automatico sin destruir detail enriquecido existente.
-- PostgreSQL/PostGIS runtime, schema, store, migracion y health check preparados.
-
-### Providers
-- Garmin legacy, Garmin official, Strava, FIT, GPX y Komoot.
-- GPX browser-native.
-- Komoot mediante GPX oficial.
-- FIT mediante `@garmin/fitsdk@21.214.0`.
-- Strava OAuth2 server-side con state CSRF, cookies HttpOnly, refresh, revoke, activities y streams.
-- Garmin official boundary canonical preparado sin inventar auth/endpoints antes de aprobacion.
-
-## Fase 8 - multisource analytics avanzado
-Estado de codigo: completado para el alcance actual.
-
-- Deduplicacion multisource conserva todas las evidencias de fuente.
-- Primary record elegido por riqueza de datos y prioridad de provider solo como desempate.
-- Campos faltantes se completan de forma conservadora sin reemplazar valores existentes.
-- `sourceQualityFlags` se unen sin duplicados.
-- YoY semanal y YTD sobre historia canonical persistida.
-- Deduplicacion usa UTC cuando existe para comparar el mismo instante entre providers; agrupaciones temporales de analytics conservan fecha local.
-- Ya no se depende exclusivamente de buckets redondeados para unir duplicados: el matcher usa tolerancias reales y conservadoras.
-- Matching actual:
-  - misma identidad canonical/source id => match directo;
-  - registros distintos de la misma fuente no se fusionan por heuristica;
-  - mismo tipo normalizado;
-  - diferencia de inicio <= 5 min;
-  - duracion: tolerancia max(120 s, 5%);
-  - distancia: tolerancia max(250 m, 3%);
-  - requiere al menos duracion o distancia comparable.
-- El matcher evita el falso negativo de actividades equivalentes ubicadas a lados distintos del limite de un bucket redondeado.
-
-## Fase 9 - validacion autonoma local
-Estado de codigo: completado.
-
-Comandos raiz:
-
-```bash
-npm run verify:install
-npm run verify
-npm run verify:quick
-npm run verify:runtime
-npm run smoke
-```
-
-`verify:install`:
-1. `npm ci` client
-2. `npm ci` server
-3. root tests
-4. client tests
-5. client lint
-6. client build
-7. server tests
-8. backend runtime smoke autocontenido
-
-`verify` ejecuta los pasos 3-8 sin reinstalar dependencias.
-`verify:quick` ejecuta root tests + client tests + server tests.
-
-Implementacion:
-- `package.json` raiz sin dependencias externas.
-- `scripts/verificationPlan.mjs`
-- `scripts/verificationPlan.test.mjs`
-- `scripts/verify.mjs`
-- el gate prueba tambien sus propios scripts raiz.
-- compatible con Windows (`npm.cmd`) y Linux/macOS (`npm`).
-- fail-fast y exit code != 0 ante cualquier paso fallido.
-- GitHub Actions puede existir como redundancia, pero no participa en la definicion de codigo valido.
-
-## Fase 10 - produccion y operabilidad
-Estado de codigo: completado para todo lo que no requiere servicios externos.
-
-### Health/readiness
-- `/api/health` para liveness del backend.
-- `/api/providers` para readiness de providers.
-- `/api/providers/postgres/health` para PostgreSQL/PostGIS bajo demanda.
-
-### Smoke checks
-- `scripts/smoke.mjs`
-- `scripts/smoke.test.mjs`
-- `npm run smoke` valida una instancia ya levantada/desplegada.
-- soporta `--base-url=` y `API_BASE_URL`.
-- timeout de 10 s por endpoint y exit code != 0 ante fallo.
-
-### Runtime verification autocontenida
-- `scripts/runtimeVerify.mjs`
-- `npm run verify:runtime`
-- `server/index.js` exporta `app` y `startServer()` sin arrancar automaticamente cuando se importa como modulo.
-- runtime verification inicia Express en puerto efimero (`0`), resuelve el puerto real, comprueba `/api/health` + `/api/providers` y cierra el servidor en `finally`.
-- no requiere Strava, Garmin Developer ni PostgreSQL/PostGIS para la comprobacion base.
-
-### Lifecycle de produccion
-- `server/runtimeLifecycle.js`
-- `server/runtimeLifecycle.test.js`
-- shutdown idempotente ante `SIGTERM`/`SIGINT`.
-- cierre correcto => exit code 0.
-- fallo al cerrar => exit code 1 con error controlado.
-- el lifecycle se adjunta solo cuando `server/index.js` es ejecutado directamente, no al importarlo para tests/runtime smoke.
-
-### Portabilidad/privacidad
-- Backup canonical local, restauracion y borrado ya implementados.
-- Exact GPS, biometria y recovery permanecen dentro del area privada.
-- Deploy Vercel/Render es una capa de ejecucion; no es el gate tecnico del codigo.
-
-## Verificacion realizada en esta sesion
-- **P-004 cerrado: `npm run verify:install` ejecutado por primera vez en checkout local real (Windows, Node v22.23.1, `D:\Proyectos\dashboard-garmin`).** PASS end-to-end: client:install, server:install, root:test, client:test (67 tests), client:lint, client:build, server:test (26 tests), root:runtime.
-- Esta primera corrida real encontro y arreglo 2 bugs genuinos que ninguna verificacion aislada previa habia detectado:
-  1. `scripts/verify.mjs`: `spawnSync("npm.cmd", args, { shell: false })` revienta con `EINVAL` en Node 22 sobre Windows (bug conocido de Node al invocar `.cmd` sin shell). Fix: `shell: process.platform === "win32"`.
-  2. `client/src/domain/analytics/multisourceAnalytics.test.js` (tests YoY, linea ~111 en adelante): las fixtures de actividades de anios distintos (2025 vs 2026) no sobrescribian `sourceActivityId` y compartian el default `"1"` del helper `activity()`. `sameIdentity()` matchea por `(source, sourceActivityId)`, asi que el dedup las fusionaba en una sola actividad logica, perdiendo los datos de uno de los dos anios. Fix: `sourceActivityId` unico por fixture. Bug de test, no de la logica de dedup en si.
-- Commit de evidencia: ver `git log` (mensaje `fix: run npm.cmd via shell on Windows verify` o similar en esta sesion).
-
-## Blockers externos reales
-1. Strava live requiere `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REDIRECT_URI` y autorizacion OAuth.
-2. Garmin official live requiere aprobacion del Developer Program y credenciales emitidas por Garmin.
-3. PostgreSQL/PostGIS live requiere provisionar DB, definir `DATABASE_URL` y ejecutar `npm run migrate:analytics`.
-4. Garmin legacy en Render puede sufrir bloqueos/rate-limit reales por IP de datacenter.
-5. Smoke tests live contra integraciones externas requieren sus servicios/credenciales; no se inventan ni almacenan secretos reales del usuario.
-
-## Decisiones fijas
-- UI/analytics nuevos consumen canonical, nunca payloads provider-specific.
-- Missing permanece `null`; no se convierte en cero.
-- Requests repetitivas a Garmin y sync Strava se mantienen secuenciales.
-- IndexedDB es default mientras Postgres/PostGIS no este configurado y migrado.
-- YoY usa historia persistida, no cientos de requests al Garmin legacy.
-- Dedup conserva provenance de todas las fuentes.
-- Exact GPS, biometria y recovery se consideran datos sensibles.
-- Provider tokens permanecen server-side/HttpOnly cuando aplica.
-- Nunca automatizar ni almacenar credenciales Garmin reales del usuario.
-- Nunca usar NTFS junctions para exponer repos git separados dentro de worktrees.
-
-## Guia de activacion/uso/despliegue
-Se creo `GUIA.md` (raiz del repo, enlazada desde `README.md`) con los 3 pasos que el usuario pidio: como activar Strava/Garmin Developer/PostgreSQL (env vars exactas + verificacion), como usar el dashboard ya desplegado, y como desplegar el proyecto desde cero (Render + Vercel, igual que la instancia real). Incluye una nota honesta: Garmin oficial solo tiene la bandera de readiness, el cliente real contra la API de Garmin developer no esta escrito todavia. Commit `b24b999`, pusheado.
+## Decisiones y contexto
+- Desarrollo directo a `main`, sin gate de GitHub Actions/CI/CD — instruccion explicita del usuario, registrada en `AGENTS.md`/`CLAUDE.md` del repo.
+- `PENDIENTES.md` es la fuente de verdad de backlog compartida entre Claude, otros agentes y ChatGPT (no duplicar en otro lado); `.claude/ESTADO.md` es memoria de sesion, no backlog.
+- Strava: NO requiere suscripcion paga para la API — solo cuenta gratuita. Si se vuelve a preguntar, no asumir que esta bloqueado por dinero.
+- Garmin Developer Program: es programa empresarial, no para hobbyists/proyectos personales — bajar expectativas de que se apruebe, y ademas parece pausado para nuevas solicitudes en este momento (banner "Stay tuned for more updates").
+- `scripts/verify.mjs` debe mantener `shell: process.platform === "win32"` en el `spawnSync` — si se revierte a `shell: false`, vuelve a romper en Windows/Node 22.
+- Fixtures de test en `multisourceAnalytics.test.js` deben usar `sourceActivityId` unico por actividad simulada — compartir el default rompe el dedup en los tests (no en produccion, ahi los IDs reales de Garmin/Strava son unicos).
 
 ## Siguiente paso concreto
-P-004 y la implementacion de codigo (fases 1-10) estan cerrados. `GUIA.md` ya cubre el "como" de activar cada bloqueo. Lo unico que queda en `PENDIENTES.md` (P-001, P-002, P-003, P-005) depende de que el usuario consiga las credenciales/infra externas: OAuth Strava, aprobacion Garmin Developer Program, y provisionar PostgreSQL/PostGIS + `DATABASE_URL`. Al retomar: preguntar al usuario si ya tiene alguna de esas 3 cosas lista; si es asi, seguir los pasos de `GUIA.md` seccion 1 para esa integracion y correr el smoke live correspondiente (P-005). Si no, no hay trabajo de codigo ejecutable pendiente en este proyecto por ahora.
+Esperar a que el usuario traiga las credenciales de Strava (`STRAVA_CLIENT_ID`/`STRAVA_CLIENT_SECRET`) desde strava.com/settings/api. Cuando las traiga: configurarlas en Render segun `GUIA.md` seccion 1.1, correr el flujo OAuth desde `/sources`, y si funciona, mover P-001 a `HECHO` en `PENDIENTES.md` con evidencia (captura o log de `/api/providers` mostrando `strava.authorized: true`). Si el usuario no trae nada nuevo, no hay trabajo de codigo ejecutable pendiente en este proyecto ahora mismo.
