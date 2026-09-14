@@ -14,7 +14,10 @@ export function buildVerificationSteps({ rootDir, quick = false, install = false
     );
   }
 
-  steps.push({ label: "client:test", cwd: clientDir, args: ["test"] });
+  steps.push(
+    { label: "root:test", cwd: rootDir, args: ["test"] },
+    { label: "client:test", cwd: clientDir, args: ["test"] },
+  );
   if (!quick) {
     steps.push(
       { label: "client:lint", cwd: clientDir, args: ["run", "lint"] },
