@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fitMessagesToCanonical } from "./fitProvider.js";
+import { fitMessagesToCanonical, parseFitToCanonical } from "./fitProvider.js";
 
 test("maps decoded FIT session and records to canonical detail", () => {
   const result = fitMessagesToCanonical({
@@ -24,4 +24,12 @@ test("maps decoded FIT session and records to canonical detail", () => {
   assert.equal(result.samples.length, 2);
   assert.equal(result.samples[1].powerW, 230);
   assert.equal(result.trackPoints.length, 2);
+});
+
+test("loads the installed Garmin FIT SDK and rejects non-FIT binary input", async () => {
+  const invalid = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]).buffer;
+  await assert.rejects(
+    () => parseFitToCanonical(invalid, { fileName: "invalid.fit" }),
+    /no es un FIT válido/i
+  );
 });
