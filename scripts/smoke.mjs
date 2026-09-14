@@ -41,6 +41,58 @@ export async function runSmoke({ baseUrl = "http://localhost:4000", fetchFn = fe
   return { ok: results.every((result) => result.ok), results };
 }
 
+export function serverBaseUrl(server) {
+  const address = server?.address?.();
+  if (!address || typeof address === "string" || !Number.isInteger(address.port)) {
+    throw new Error("Runtime server has no assigned TCP port");
+  }
+  return `http://127.0.0.1:${address.port}`;
+}
+
+export async function waitForListening(server) {
+  if (server?.listening) return server;
+  if (!server || typeof server.once !== "function") {
+    throw new Error("Runtime server is not listenable");
+  }
+
+  return new Promise((resolve, reject) => {
+    const onListening = () => {
+      server.off?.("error", onError);
+      resolve(server);
+    };
+    const onError = (error) => {
+      server.off?.("listening", onListening);
+      reject(error);
+    };
+    server.once("listening", onListening);
+    server.once("error", onError);
+  });
+}
+
+export async function closeServer(server) {
+  if (!server || typeof server.close !== "function" || !server.listening) return;
+  await new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
+export async function runRuntimeSmoke({ startServerFn, smokeFn = runSmoke } = {}) {
+  if (typeof startServerFn !== "function") {
+    throw new Error("startServerFn is required for runtime smoke verification");
+  }
+
+  const server = await startServerFn(0);
+  try {
+    await waitForListening(server);
+    return await smokeFn({ baseUrl: serverBaseUrl(server) });
+  } finally {
+    await closeServer(server);
+  }
+}
+
 const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : null;
 if (invokedPath === import.meta.url) {
   const baseUrlArg = process.argv.find((arg) => arg.startsWith("--base-url="));
