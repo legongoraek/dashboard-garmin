@@ -36,6 +36,13 @@ _Ultima actualizacion: 2026-09-14_
 - Analitica multisource local muestra registros fuente, actividades logicas, duplicados vinculados y conteo por provider.
 - Year-over-year semanal funciona sobre historia canonical persistida sin generar cientos de llamadas HRV/readiness a Garmin.
 
+### Privacidad y portabilidad local
+- Backup canonical JSON versionado para datos de IndexedDB.
+- Validacion estricta de schema version y `activityUid` antes de restaurar un backup.
+- `/sources` permite exportar el archivo canonical local, restaurarlo y borrar todo IndexedDB con confirmacion doble.
+- Export/restauracion/borrado se ejecutan en el navegador; el backup no se envia al backend.
+- La UI y analytics multisource se refrescan inmediatamente despues de sync/import/restore/delete.
+
 ### PostgreSQL + PostGIS runtime
 - Migration `server/migrations/001_analytics_postgis.sql` incluye:
   - activities
@@ -71,6 +78,7 @@ _Ultima actualizacion: 2026-09-14_
   - decoding binario activo via `Stream.fromArrayBuffer` + `Decoder`.
   - verificacion de formato/integridad antes de normalizar.
   - session/records se convierten a canonical activity/samples/track points manteniendo provenance FIT.
+  - CI carga realmente el SDK y verifica que un buffer no-FIT sea rechazado por la ruta binaria.
 - Pantalla protegida `/sources` reporta readiness real, importa GPX/Komoot/FIT, sincroniza Strava, muestra analytics multisource/YoY y permite verificar PostGIS cuando esta configurado.
 
 ### Official Garmin provider (Phase 7)
@@ -101,8 +109,9 @@ _Ultima actualizacion: 2026-09-14_
 - Multisource dedup + YoY quedo verde en CI run #15 (`9a1e43c615e20160ce06bfcb2e16a31a26656349`).
 - FIT SDK se instalo mediante lockfile generado por npm; una corrida temporal verifico `npm ci` antes del commit.
 - PostgreSQL runtime `pg` se instalo mediante lockfile generado por npm; una corrida temporal verifico `npm ci` antes del commit.
-- CI run #39 (`d209c236a3808a5e2538aca7961ae898e0e9b972`) termino success con client tests/lint/build y server tests.
-- La CI del estado final posterior a UI/readiness/Postgres health debe permanecer verde antes de declarar cierre tecnico.
+- CI run #40 (`375c47b2952f33580b9a2b151aa2a6cf7ccfdb78`) termino success con client tests/lint/build y server tests para FIT + Postgres health UI.
+- CI run #46 (`9f35a4dca30fc33822d671ac9e7a53a001e833b9`) termino success con client tests/lint/build y server tests para privacidad/portabilidad local.
+- CI run #47 (`db4a6ba63df7d9b60bdecdff41e2e69e470537dc`) termino success: client `npm ci`, tests (incluyendo import real del FIT SDK), lint y build; server `npm ci` y tests.
 - Vercel puede seguir mostrando failure por build-rate-limit del plan; GitHub Actions es el gate tecnico confiable mientras dure ese limite.
 
 ## Decisiones fijas
@@ -112,6 +121,7 @@ _Ultima actualizacion: 2026-09-14_
 - IndexedDB es default mientras no exista una DB Postgres/PostGIS configurada y migrada.
 - YoY usa historia persistida; no se implementa mediante cientos de requests diarios al Garmin legacy.
 - Exact GPS, biometria y recovery se consideran datos sensibles y nunca se exponen en landing publica.
+- Backups canonical locales se tratan como datos sensibles y solo se exportan por accion explicita del usuario.
 - Provider tokens permanecen server-side/HttpOnly cuando aplica.
 - Nunca automatizar ni almacenar credenciales Garmin reales del usuario.
 - Nunca usar NTFS junctions para exponer repos git separados dentro de worktrees.
