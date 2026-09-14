@@ -1,0 +1,26 @@
+# Garmin Dashboard
+
+> Dashboard web independiente para visualizar información personal procedente de Garmin Connect.
+
+Canonical URL: https://dashboard-garmin-azure.vercel.app/
+Source code: https://github.com/legongoraek/dashboard-garmin
+Language: Spanish (es)
+
+## Purpose
+
+Garmin Dashboard centraliza información de actividad, salud, entrenamiento y rutas obtenida desde Garmin Connect para presentarla en una interfaz web.
+
+## Main capabilities
+
+- Inicio de sesión con una cuenta de Garmin Connect, incluido soporte para MFA cuando Garmin lo requiere.
+- Visualización de información y métricas de actividad física.
+- Visualización de datos relacionados con salud y entrenamiento.
+- Visualización de rutas y datos geográficos asociados a actividades cuando están disponibles.
+
+## Access and privacy
+
+La página pública describe la aplicación. Los datos personales del dashboard requieren autenticación y no forman parte del contenido público destinado a indexación.
+
+## Important clarification
+
+Este proyecto es un dashboard independiente y no se presenta como un producto oficial de Garmin.
