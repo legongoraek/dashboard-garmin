@@ -1,0 +1,14 @@
+{
+  "name": "dashboard-garmin-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test scripts/*.test.mjs",
+    "verify": "node scripts/verify.mjs",
+    "verify:quick": "node scripts/verify.mjs --quick",
+    "verify:install": "node scripts/verify.mjs --install"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
