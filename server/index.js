@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { pathToFileURL } from "node:url";
 import providerRoutes from "./providerRoutes.js";
 
 import {
@@ -17,7 +18,7 @@ import {
   checkSession,
 } from "./garminService.js";
 
-const app = express();
+export const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -263,8 +264,16 @@ app.get("/api/debug-network", async (req, res) => {
   res.json({ ok: true, results });
 });
 
-const PORT = process.env.PORT || 4000;
+export function startServer(port = process.env.PORT || 4000, { logger = console } = {}) {
+  const server = app.listen(port, () => {
+    const address = server.address();
+    const actualPort = typeof address === "object" && address ? address.port : port;
+    logger.log(`Garmin API running on http://localhost:${actualPort}`);
+  });
+  return server;
+}
 
-app.listen(PORT, () => {
-  console.log(`Garmin API running on http://localhost:${PORT}`);
-});
+const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : null;
+if (invokedPath === import.meta.url) {
+  startServer();
+}
