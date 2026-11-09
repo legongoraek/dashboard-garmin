@@ -96,7 +96,13 @@ git clone https://github.com/legongoraek/dashboard-garmin.git
 cd dashboard-garmin
 ```
 
-`ai-skill-garmin/` es un repo público de otro autor (`dsebastien/ai-skill-garmin`) vendorizado dentro de este proyecto — no es necesario clonarlo aparte, ya viene con el checkout.
+El backend ejecuta el CLI de Garmin desde el repo hermano `../ai-skill-garmin` (`server/garminService.js`). Clónalo junto a este repo antes de usar Garmin legacy:
+
+```bash
+git clone https://github.com/dsebastien/ai-skill-garmin.git ../ai-skill-garmin
+```
+
+Bun es necesario para ejecutar ese CLI.
 
 ### 3.3 Correr en local
 
