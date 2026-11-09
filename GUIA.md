@@ -156,7 +156,7 @@ npm run smoke -- --base-url=https://<tu-backend-en-render>
 
 ## 4. Renovar el login de Garmin cuando Render se bloquea
 
-Contexto ([P-006](PENDIENTES.md)): Garmin bloquea el login completo (con MFA) cuando viene de una IP de datacenter como la de Render. Esto **solo pasa en el login inicial** — una vez logueado, la sesión se renueva sola sin MFA por ~1 año (`ai-skill-garmin/skills/garmin-connect/scripts/garmin.ts:29-31`), así que en el día a día producción funciona normal. Esta receta solo hace falta cuando ese año se cumple y el login vuelve a fallar en producción con `429`/`OAuth1 exchange failed`.
+Contexto ([P-006](PENDIENTES.md)): se observó que Garmin puede limitar el login inicial con MFA desde la IP de Render (`OAuth1 exchange failed: 429 Rate limited`). Esta receta permite recuperar el acceso con la sesión obtenida en local cuando ocurra ese bloqueo. El intervalo de refresco de tokens no está verificado en este checkout: el servicio invoca el CLI del repo hermano `../ai-skill-garmin`, pero no implementa su ciclo de vida.
 
 No hay forma de evitar que ese primer login corra desde tu máquina — es la IP la que Garmin bloquea, no el código, y ninguna solución gratis/sin cambiar de hosting lo evita. Lo que sí es simple es pasar la sesión ya lograda a producción, sin nada que instalar ni mantener:
 
