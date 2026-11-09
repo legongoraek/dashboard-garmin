@@ -96,10 +96,10 @@ git clone https://github.com/legongoraek/dashboard-garmin.git
 cd dashboard-garmin
 ```
 
-El backend ejecuta el CLI de Garmin desde el repo hermano `../ai-skill-garmin` (`server/garminService.js`). Clónalo junto a este repo antes de usar Garmin legacy:
+El backend espera el CLI de Garmin en `ai-skill-garmin/`, junto a `server/` dentro de este checkout (`server/garminService.js`). El repo no se versiona aquí; clónalo desde la raíz de `dashboard-garmin` antes de usar Garmin legacy:
 
 ```bash
-git clone https://github.com/dsebastien/ai-skill-garmin.git ../ai-skill-garmin
+git clone https://github.com/dsebastien/ai-skill-garmin.git ai-skill-garmin
 ```
 
 Bun es necesario para ejecutar ese CLI.
