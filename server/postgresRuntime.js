@@ -8,7 +8,8 @@ export function buildPoolConfig(env = process.env) {
 
   return {
     connectionString: env.DATABASE_URL,
-    ssl: useSsl ? { rejectUnauthorized: false } : false,
+    // Verify the server certificate; PGSSLMODE=no-verify is the explicit opt-out for private CAs.
+    ssl: useSsl ? { rejectUnauthorized: env.PGSSLMODE !== "no-verify" } : false,
     max: Number(env.PGPOOL_MAX || 5),
     idleTimeoutMillis: Number(env.PG_IDLE_TIMEOUT_MS || 30_000),
     connectionTimeoutMillis: Number(env.PG_CONNECT_TIMEOUT_MS || 10_000),

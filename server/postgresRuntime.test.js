@@ -6,12 +6,21 @@ test("buildPoolConfig returns null when DATABASE_URL is absent", () => {
   assert.equal(buildPoolConfig({}), null);
 });
 
-test("buildPoolConfig uses connection string and production SSL by default", () => {
+test("buildPoolConfig uses connection string and verified production SSL by default", () => {
   const config = buildPoolConfig({
     DATABASE_URL: "postgres://example/db",
     NODE_ENV: "production",
   });
   assert.equal(config.connectionString, "postgres://example/db");
+  assert.deepEqual(config.ssl, { rejectUnauthorized: true });
+});
+
+test("buildPoolConfig skips certificate verification only when explicitly asked", () => {
+  const config = buildPoolConfig({
+    DATABASE_URL: "postgres://example/db",
+    NODE_ENV: "production",
+    PGSSLMODE: "no-verify",
+  });
   assert.deepEqual(config.ssl, { rejectUnauthorized: false });
 });
 
