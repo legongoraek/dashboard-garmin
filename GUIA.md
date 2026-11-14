@@ -44,6 +44,7 @@ Los bloqueos activos están registrados con evidencia en [PENDIENTES.md](PENDIEN
 
 1. Provisiona una instancia Postgres con la extensión **PostGIS** disponible (Render Postgres, Supabase, Neon, etc. — cualquiera que permita `CREATE EXTENSION postgis`).
 2. Toma la cadena de conexión y defínela en el backend como `DATABASE_URL`.
+   - En producción el backend verifica el certificado TLS del servidor. Si tu proveedor usa una CA privada que Node no reconoce, define `PGSSLMODE=no-verify` (cifra pero no verifica; úsalo solo si no hay alternativa).
    - Opcionales: `PGSSL=disable` o `PGSSLMODE=disable` si tu proveedor no usa TLS; `PGPOOL_MAX`, `PG_IDLE_TIMEOUT_MS`, `PG_CONNECT_TIMEOUT_MS` para ajustar el pool (`server/postgresRuntime.js`).
 3. Corre la migración (desde tu máquina, apuntando a la DB real vía `DATABASE_URL` en el entorno donde ejecutes el comando):
    ```bash
