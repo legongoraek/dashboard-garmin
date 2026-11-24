@@ -18,7 +18,8 @@ test("the public document exposes core SEO and social metadata", async () => {
     /rel="canonical" href="https:\/\/dashboard-garmin-azure\.vercel\.app\/"/,
   );
   assert.match(html, /property="og:title"/);
-  assert.match(html, /name="twitter:card" content="summary"/);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
+  assert.match(html, /property="og:image" content="https:\/\/dashboard-garmin-azure\.vercel\.app\/og-image\.png"/);
   assert.match(html, /type="application\/ld\+json"/);
   assert.match(html, /"@type": "WebApplication"/);
 });
