@@ -20,6 +20,7 @@ export function injectShell(html) {
   const title = decode(html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? "").trim();
   const description = decode(html.match(/<meta\s+name="description"\s+content="([^"]*)"/i)?.[1] ?? "").trim();
   if (!title || !description) throw new Error("static-shell: <title> and meta description are required");
+  if (!/<meta\s+property="og:image"\s+content="https:\/\/[^"]+"/i.test(html)) throw new Error("static-shell: absolute og:image is required");
   const ld = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)].flatMap((m) => nodes(JSON.parse(m[1])));
   const questions = ld.filter((n) => n["@type"] === "Question" && n.acceptedAnswer?.text);
   const features = [...new Set(ld.flatMap((n) => (Array.isArray(n.featureList) ? n.featureList : [])))];
