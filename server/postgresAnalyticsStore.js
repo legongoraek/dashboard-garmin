@@ -74,56 +74,104 @@ function buildSourceUpsert(activityId, activity) {
   };
 }
 
-function buildSampleInsert(activityId, sample) {
+// One INSERT per batch instead of one per row: a 1 h activity at 1 Hz has
+// ~3,600 samples and ~3,600 track points, which used to be ~7,200 round trips
+// inside one open transaction. 1,000 rows x 11 params stays well below the
+// PostgreSQL limit of 65,535 bind parameters per statement.
+export const INSERT_BATCH_SIZE = 1000;
+
+export function chunk(rows, size = INSERT_BATCH_SIZE) {
+  const batches = [];
+  for (let i = 0; i < rows.length; i += size) batches.push(rows.slice(i, i + size));
+  return batches;
+}
+
+function placeholders(rowCount, columnCount, rowTemplate) {
+  const rows = [];
+  for (let row = 0; row < rowCount; row += 1) {
+    const base = row * columnCount;
+    rows.push(rowTemplate((column) => `$${base + column}`));
+  }
+  return rows.join(",\n");
+}
+
+function sampleValues(activityId, sample) {
+  return [
+    activityId,
+    nullable(sample.tOffsetS),
+    nullable(sample.timestampUtc),
+    nullable(sample.distanceM),
+    nullable(sample.speedMps),
+    nullable(sample.heartRateBpm),
+    nullable(sample.cadenceRpm),
+    nullable(sample.powerW),
+    nullable(sample.altitudeM),
+    nullable(sample.temperatureC),
+    JSON.stringify(sample.sourceQualityFlags ?? []),
+  ];
+}
+
+const SAMPLE_ROW = (p) =>
+  `(${p(1)},${p(2)},${p(3)},${p(4)},${p(5)},${p(6)},${p(7)},${p(8)},${p(9)},${p(10)},${p(11)}::jsonb)`;
+
+export function buildSampleBatchInsert(activityId, samples) {
   return {
     text: `
       INSERT INTO activity_samples (
         activity_id, t_offset_s, timestamp_utc, distance_m, speed_mps,
         heart_rate_bpm, cadence_rpm, power_w, altitude_m, temperature_c,
         source_quality_flags
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)
+      ) VALUES ${placeholders(samples.length, 11, SAMPLE_ROW)}
     `,
-    values: [
-      activityId,
-      nullable(sample.tOffsetS),
-      nullable(sample.timestampUtc),
-      nullable(sample.distanceM),
-      nullable(sample.speedMps),
-      nullable(sample.heartRateBpm),
-      nullable(sample.cadenceRpm),
-      nullable(sample.powerW),
-      nullable(sample.altitudeM),
-      nullable(sample.temperatureC),
-      JSON.stringify(sample.sourceQualityFlags ?? []),
-    ],
+    values: samples.flatMap((sample) => sampleValues(activityId, sample)),
   };
 }
 
-export function buildTrackPointInsert(point, activityIdOverride = null) {
-  const activityId = activityIdOverride ?? point.activityUid;
-  return {
-    text: `
-      INSERT INTO activity_track_points (
-        activity_id, sequence, timestamp_utc, point, altitude_m, distance_m
-      ) VALUES (
-        $1, $2, $5, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $6, $7
-      )
+function trackPointValues(point, activityId) {
+  return [
+    activityId,
+    point.sequence,
+    point.latitude,
+    point.longitude,
+    nullable(point.timestampUtc),
+    nullable(point.altitudeM),
+    nullable(point.distanceM),
+  ];
+}
+
+const TRACK_POINT_ROW = (p) =>
+  `(${p(1)}, ${p(2)}, ${p(5)}, ST_SetSRID(ST_MakePoint(${p(4)}, ${p(3)}), 4326)::geography, ${p(6)}, ${p(7)})`;
+
+const TRACK_POINT_UPSERT = `
       ON CONFLICT (activity_id, sequence) DO UPDATE SET
         timestamp_utc = EXCLUDED.timestamp_utc,
         point = EXCLUDED.point,
         altitude_m = EXCLUDED.altitude_m,
         distance_m = EXCLUDED.distance_m
-    `,
-    values: [
-      activityId,
-      point.sequence,
-      point.latitude,
-      point.longitude,
-      nullable(point.timestampUtc),
-      nullable(point.altitudeM),
-      nullable(point.distanceM),
-    ],
+    `;
+
+export function buildTrackPointInsert(point, activityIdOverride = null) {
+  return buildTrackPointBatchInsert(activityIdOverride ?? point.activityUid, [point]);
+}
+
+export function buildTrackPointBatchInsert(activityId, points) {
+  return {
+    text: `
+      INSERT INTO activity_track_points (
+        activity_id, sequence, timestamp_utc, point, altitude_m, distance_m
+      ) VALUES ${placeholders(points.length, 7, TRACK_POINT_ROW)}${TRACK_POINT_UPSERT}`,
+    values: points.flatMap((point) => trackPointValues(point, activityId)),
   };
+}
+
+// A multi-row upsert fails if two rows share (activity_id, sequence)
+// ("ON CONFLICT DO UPDATE command cannot affect row a second time"). The previous
+// row-by-row upsert let the last occurrence win, so keep that: last value wins,
+// first position kept.
+export function lastTrackPointPerSequence(points) {
+  const bySequence = new Map();
+  for (const point of points) bySequence.set(point.sequence, point);
+  return [...bySequence.values()];
 }
 
 export async function saveCanonicalActivityBundle(pool, detail) {
@@ -143,14 +191,14 @@ export async function saveCanonicalActivityBundle(pool, detail) {
     await client.query(sourceQuery.text, sourceQuery.values);
 
     await client.query("DELETE FROM activity_samples WHERE activity_id = $1", [activityId]);
-    for (const sample of detail.samples ?? []) {
-      const query = buildSampleInsert(activityId, sample);
+    for (const batch of chunk(detail.samples ?? [])) {
+      const query = buildSampleBatchInsert(activityId, batch);
       await client.query(query.text, query.values);
     }
 
     await client.query("DELETE FROM activity_track_points WHERE activity_id = $1", [activityId]);
-    for (const point of detail.trackPoints ?? []) {
-      const query = buildTrackPointInsert(point, activityId);
+    for (const batch of chunk(lastTrackPointPerSequence(detail.trackPoints ?? []))) {
+      const query = buildTrackPointBatchInsert(activityId, batch);
       await client.query(query.text, query.values);
     }
 
